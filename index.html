@@ -1,16 +1,14 @@
-<!doctype html>
-<html lang="es"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Compactación Terracerías</title>
+<link rel="manifest" href="manifest.json?v=2">
+<link rel="icon" href="icon-192.png?v=2" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png?v=2">
+<meta name="theme-color" content="#5e0d0a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Compactación Terracerías">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Calas JUVISA">
-<meta name="theme-color" content="#e4b93f">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon-180.png">
-<link rel="manifest" href="manifest.json">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Calas JUVISA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -187,7 +185,6 @@ ul.tips{margin:0;padding-left:18px;display:grid;gap:3px}
 @media (prefers-reduced-motion:no-preference){.tab,.btn{transition:background .15s}}
 </style>
 
-</head><body>
 <div class="wrap">
   <div class="sheet">
     <div class="head">
@@ -206,7 +203,7 @@ ul.tips{margin:0;padding-left:18px;display:grid;gap:3px}
       <button class="tab" role="tab" data-t="fotos">Fotos</button>
       <button class="tab" role="tab" data-t="obras">Obras</button>
       <button class="tab" role="tab" data-t="guia">Guía de capas</button>
-      <button class="tab" role="tab" data-t="registros">Registros guardados</button>
+      <button class="tab" role="tab" data-t="registros">Registros guardados <span id="regCnt" style="font-weight:700;color:var(--maroon)"></span></button>
     </div>
 
     <!-- FORMATO -->
@@ -265,24 +262,30 @@ ul.tips{margin:0;padding-left:18px;display:grid;gap:3px}
     <div class="panel" data-p="ubicacion" hidden>
       <div class="cols2">
         <div class="box" style="display:grid;gap:10px">
-          <div class="row" style="justify-content:space-between"><h2 style="font-size:20px">Coordenadas GPS</h2><button class="btn sm pri" id="gpsBtn" type="button">📍 Tomar GPS aquí</button></div>
-          <label class="fld"><span>Pegar coordenadas (lat, long)</span><input id="gpsPaste" placeholder="19.2154, -104.6893" inputmode="decimal"></label>
+          <h2 style="font-size:20px">Coordenadas GPS</h2>
+          <div class="row"><button class="btn pri" id="bGps" type="button">📍 Mi ubicación</button><span class="hint" id="gpsMsg"></span></div>
+          <label class="fld"><span>Pegar coordenadas o enlace de Maps</span><input id="gpsPaste" placeholder="19.2154, -104.6893 o enlace de Google/Apple Maps"></label>
           <div class="gpsg">
-            <label class="fld"><span>Latitud</span><input id="lat" data-gps="lat" inputmode="decimal"></label>
-            <label class="fld"><span>Longitud</span><input id="lon" data-gps="lon" inputmode="decimal"></label>
+            <label class="fld"><span>Latitud</span><input id="lat" data-gps="lat" inputmode="decimal" placeholder="19.2341"></label>
+            <label class="fld"><span>Longitud</span><input id="lon" data-gps="lon" inputmode="decimal" placeholder="-104.5672"></label>
           </div>
           <div class="gpsg">
             <label class="fld"><span>Origen del tramo</span><input id="origen" data-gps="origen"></label>
             <label class="fld"><span>Destino del tramo</span><input id="destino" data-gps="destino"></label>
           </div>
-          <div class="row"><a class="btn sm" id="mapsLink" href="#" target="_blank" rel="noopener">Abrir en Google Maps</a><span class="hint" id="gpsMsg"></span></div>
-          <p class="hint" style="margin:0">En el iPhone: abre Mapas, mantén el dedo sobre el punto de la cala, desliza la tarjeta hacia arriba y toca las coordenadas para copiarlas. Luego pégalas aquí.</p>
+          <p class="hint" id="gpsHint" style="margin:0">Si el botón no puede leer tu GPS, pega aquí un enlace o coordenadas de Google Maps / Apple Maps y se acomodan solas.</p>
+          <div class="row"><a class="btn sm" id="mapsLink" href="#" target="_blank" rel="noopener">Abrir en Google Maps</a></div>
         </div>
         <div class="box" style="display:grid;gap:10px">
-          <h2 style="font-size:20px">Captura del mapa (opcional)</h2>
-          <p class="hint" style="margin:0">Toma una captura de pantalla de Mapas con el punto marcado y súbela. Aparece en el informe junto al croquis.</p>
-          <div class="row"><label class="btn sm" for="mapFile">Subir captura</label><input id="mapFile" type="file" accept="image/*" hidden><button class="btn sm danger" id="mapDel" type="button" hidden>Quitar</button></div>
-          <img id="mapImg" class="mapimg" alt="Captura del mapa de ubicación" hidden>
+          <h2 style="font-size:20px">Ubicación satelital</h2>
+          <div class="row">
+            <a class="btn" id="bEarth" href="https://earth.google.com/web/" target="_blank" rel="noopener">🌍 Abrir en Google Earth</a>
+            <label class="btn" for="mapFile">📎 Adjuntar captura</label><input id="mapFile" type="file" accept="image/*" hidden>
+            <button class="btn" id="bSat" type="button">🛰 Mapa satelital automático</button>
+            <button class="btn sm danger" id="mapDel" type="button" hidden>Quitar</button>
+          </div>
+          <p class="hint" id="satHint" style="margin:0">Abre Google Earth en tu punto, toma captura de pantalla (botón lateral + subir volumen) y adjúntala con 📎. Se guarda en este apartado y sale en el PDF junto al croquis.</p>
+          <img id="mapImg" class="mapimg" alt="Mapa de ubicación" hidden>
         </div>
       </div>
       <div class="box" style="margin-top:12px;display:grid;gap:8px">
@@ -341,28 +344,33 @@ ul.tips{margin:0;padding-left:18px;display:grid;gap:3px}
     <!-- REGISTROS -->
     <div class="panel" data-p="registros" hidden>
       <div class="row" style="justify-content:space-between;margin-bottom:10px">
-        <h2 style="font-size:22px">Formatos guardados</h2>
+        <h2 style="font-size:22px">Registros guardados</h2>
         <span class="hint" id="storeMode"></span>
       </div>
-      <div class="row" style="margin-bottom:12px"><button class="btn sm" id="bkExport" type="button">Respaldar todo</button><label class="btn sm" for="bkFile">Restaurar respaldo</label><input id="bkFile" type="file" accept=".json,application/json" hidden><span class="hint">El respaldo incluye formatos, obras y fotos. Guárdalo en Drive o mándatelo por correo.</span>
+      <div class="box" id="ghBox" style="display:grid;gap:8px;margin-bottom:10px">
+        <strong id="ghState">☁️ Respaldo en la nube</strong>
+        <div id="ghTokRow" class="row" style="flex-wrap:nowrap"><input id="ghTok" placeholder="Pega aquí tu token de GitHub" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;min-width:0;padding:9px 10px;border:1.5px solid var(--line);border-radius:6px"><button class="btn sm pri" id="ghTokOk" type="button">Guardar</button></div>
+        <div class="row"><button class="btn sm" id="ghNow" type="button">Sincronizar ahora</button><span class="hint" id="ghMsg"></span></div>
+        <p class="hint" style="margin:0">Con el token, lo que guardes en la compu aparece en el iPhone y al revés, con fotos. Sin internet se guarda en el dispositivo y se sube solo al regresar la señal.</p>
       </div>
+      <input id="regQ" type="search" placeholder="Buscar por obra, fecha, estación o capa…" aria-label="Buscar registros" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:6px;margin-bottom:10px;background:var(--paper)">
       <div class="regs" id="regs"></div>
     </div>
   </div>
 </div>
 
 <div class="bar"><div class="in">
-  <button class="btn pri" id="bSave" type="button">Guardar formato</button>
+  <button class="btn pri" id="bSave" type="button">Guardar registro</button>
   <button class="btn" id="bAdd" type="button">+ Nueva cala</button>
   <button class="btn" id="bPdf" type="button">Informe PDF</button>
-  <button class="btn" id="bNew" type="button">Nuevo formato</button>
+  <button class="btn" id="bNew" type="button">Nuevo registro</button>
   <span class="st" id="status">Sin guardar</span>
 </div></div>
 <div class="toast" id="toast" hidden></div>
 <div class="sheetbg" id="pdfSheet" hidden><div class="pdfbox" role="dialog" aria-labelledby="pdfT">
   <div class="pdfhead"><h2 id="pdfT">Informe PDF listo</h2><button class="rm" id="pdfClose" type="button" aria-label="Cerrar" style="font-size:22px">×</button></div>
   <p class="hint" id="pdfName" style="margin:0"></p>
-  <div class="row" style="flex-wrap:nowrap"><button class="btn pri" id="bPdfSave" type="button" style="flex:1">Guardar PDF</button><button class="btn" id="bPdfPrint" type="button" style="flex:1">Imprimir</button></div>
+  <button class="btn pri" id="bPdfSave" type="button">Guardar PDF</button>
   <div class="row" style="flex-wrap:nowrap"><button class="btn wa" id="bPdfWa" type="button" style="flex:1">PDF por WhatsApp</button><button class="btn gm" id="bPdfGm" type="button" style="flex:1">PDF por Gmail</button></div>
   <p class="hint" style="margin:0">Se abre el menú de compartir del iPhone con el PDF: elige WhatsApp o Gmail y el destinatario.</p>
   <span class="hint" style="font-weight:600;margin-top:4px">Solo el resumen en texto:</span>
@@ -503,7 +511,7 @@ function fillGeneral(){
   ["lat","lon","origen","destino"].forEach(k=>{$("#"+k).value=reg.gps[k]||""});
   $("#exBanner").hidden=!reg._example;obraOptions();
 }
-function renderAll(){fillGeneral();renderTable();renderAnalisis();renderFotos();renderMapa();drawCroquis();updMaps();renderRegs()}
+function renderAll(){setTimeout(ensureImgs,0);fillGeneral();renderTable();renderAnalisis();renderFotos();renderMapa();drawCroquis();updMaps();renderRegs()}
 
 document.addEventListener("input",e=>{
   const t=e.target;
@@ -524,8 +532,54 @@ $("#tabla").addEventListener("click",e=>{const b=e.target.closest("[data-rm]");i
   b.dataset.armed="1";b.textContent="¿Quitar?";b.style.fontSize="12px";setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent="×";b.style.fontSize=""}},3000)});
 
 $("#obraSel").addEventListener("change",e=>{applyObra(e.target.value);if(!e.target.value){$("#obra").hidden=false;$("#obra").focus()}});
-$("#gpsPaste").addEventListener("input",e=>{const m=e.target.value.match(/(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)/);
-  if(m){reg.gps.lat=m[1];reg.gps.lon=m[2];$("#lat").value=m[1];$("#lon").value=m[2];touch();drawCroquis();updMaps();$("#gpsMsg").textContent="Coordenadas aplicadas"}});
+/* ---------- Ubicación (igual que la Bitácora) ---------- */
+function parseCoords(txt){
+ if(!txt)return null;let m=txt.match(/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/)||txt.match(/[?&](?:q|ll|query|sll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/)||txt.match(/(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/);
+ if(m)return{lat:+m[1],lng:+m[2]};
+ m=txt.match(/(\d+)°\s*(\d+)'\s*([\d.]+)"?\s*([NS])[\s,]+(\d+)°\s*(\d+)'\s*([\d.]+)"?\s*([EWO])/i);
+ if(m){const c=(d,mi,s,h)=>(+d+ +mi/60+ +s/3600)*(/[SWO]/i.test(h)?-1:1);return{lat:c(m[1],m[2],m[3],m[4]),lng:c(m[5],m[6],m[7],m[8])}}
+ m=txt.match(/(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)/);if(m&&Math.abs(+m[1])<=90&&Math.abs(+m[2])<=180&&/\./.test(m[1]))return{lat:+m[1],lng:+m[2]};
+ return null}
+function setCoords(c){reg.gps.lat=c.lat.toFixed(6);reg.gps.lon=c.lng.toFixed(6);$("#lat").value=reg.gps.lat;$("#lon").value=reg.gps.lon;touch();drawCroquis();updMaps()}
+$("#gpsPaste").addEventListener("input",e=>{const c=parseCoords(e.target.value);if(c){setCoords(c);$("#gpsMsg").textContent="Coordenadas aplicadas";toast("Coordenadas capturadas")}});
+["#lat","#lon"].forEach(id=>$(id).addEventListener("paste",e=>{const tx=(e.clipboardData||window.clipboardData).getData("text");const c=parseCoords(tx);if(c&&/[,@°]/.test(tx)){e.preventDefault();setCoords(c);toast("Coordenadas capturadas")}}));
+$("#bGps").addEventListener("click",()=>{const hint=$("#gpsHint"),b=$("#bGps");
+ if(!navigator.geolocation){hint.textContent="Este navegador no da acceso al GPS. Abre Maps, mantén presionado tu punto, copia las coordenadas y pégalas arriba.";return}
+ b.textContent="Buscando…";
+ navigator.geolocation.getCurrentPosition(p=>{setCoords({lat:p.coords.latitude,lng:p.coords.longitude});b.textContent="📍 Mi ubicación";hint.textContent=`Ubicación capturada (precisión ±${Math.round(p.coords.accuracy)} m).`;toast("Ubicación capturada");addSatMap()},
+ ()=>{b.textContent="📍 Mi ubicación";hint.innerHTML=`Este visor no permite leer el GPS. <a href="https://maps.apple.com/" target="_blank" rel="noopener">Abre Maps</a>, mantén presionado tu punto, copia las coordenadas y pégalas en «Pegar coordenadas»: se separan solas.`},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})});
+$("#bEarth").addEventListener("click",()=>{const la=num(reg.gps.lat),lo=num(reg.gps.lon),u=(reg.ubicacion||"").trim();
+ $("#bEarth").href=isFinite(la)&&isFinite(lo)?`https://earth.google.com/web/@${la},${lo},120a,700d,35y,0h,0t,0r`:u?`https://earth.google.com/web/search/${encodeURIComponent(u)}`:"https://earth.google.com/web/"});
+const SAT_Z=18,SAT_W=1280,SAT_H=800;
+function loadTile(url){return new Promise((res,rej)=>{const im=new Image();im.crossOrigin="anonymous";im.onload=()=>res(im);im.onerror=rej;im.src=url})}
+async function satImage(lat,lng){
+ const n=256*Math.pow(2,SAT_Z),r=lat*Math.PI/180;
+ const px=(lng+180)/360*n,py=(1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n;
+ const x0=px-SAT_W/2,y0=py-SAT_H/2,tx0=Math.floor(x0/256),ty0=Math.floor(y0/256),tx1=Math.floor((x0+SAT_W)/256),ty1=Math.floor((y0+SAT_H)/256);
+ const c=document.createElement("canvas");c.width=SAT_W;c.height=SAT_H;const g=c.getContext("2d");g.fillStyle="#333";g.fillRect(0,0,SAT_W,SAT_H);
+ const jobs=[];for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++)jobs.push(loadTile(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${SAT_Z}/${ty}/${tx}`).then(im=>g.drawImage(im,Math.round(tx*256-x0),Math.round(ty*256-y0))));
+ await Promise.all(jobs);
+ const cx=SAT_W/2,cy=SAT_H/2;g.save();g.shadowColor="rgba(0,0,0,.5)";g.shadowBlur=8;g.fillStyle="#e53935";g.beginPath();g.arc(cx,cy-34,20,Math.PI,0);g.lineTo(cx,cy);g.closePath();g.fill();g.restore();
+ g.fillStyle="#fff";g.beginPath();g.arc(cx,cy-34,8,0,Math.PI*2);g.fill();
+ const mpp=156543.03392*Math.cos(r)/Math.pow(2,SAT_Z),sm=100,sl=sm/mpp;
+ g.fillStyle="rgba(0,0,0,.55)";g.fillRect(SAT_W-sl-44,SAT_H-74,sl+30,30);g.fillStyle="#fff";g.fillRect(SAT_W-sl-30,SAT_H-52,sl,5);g.font="600 16px system-ui,sans-serif";g.fillText("100 m",SAT_W-sl-30,SAT_H-58);
+ const ests=reg.calas.map(c=>c.est).filter(Boolean),cad=ests.length?"Km "+ests[0]+(ests.length>1?" – "+ests[ests.length-1]:""):"";
+ const fd=reg.fecha?reg.fecha.split("-").reverse().join("/"):"";
+ const t1=`${lat.toFixed(6)}, ${lng.toFixed(6)}`,t2=[cad,`${fd} ${reg.hora||""}`.trim()].filter(Boolean).join("  ·  ")||"Grado de compactación";
+ g.font="600 22px system-ui,sans-serif";const tw=Math.max(g.measureText(t1).width,(g.font="500 18px system-ui,sans-serif",g.measureText(t2).width));
+ g.fillStyle="rgba(0,0,0,.6)";g.fillRect(14,14,tw+28,70);g.fillStyle="#fff";g.font="600 22px system-ui,sans-serif";g.fillText(t1,28,44);g.fillStyle="#f2b705";g.font="500 18px system-ui,sans-serif";g.fillText(t2,28,72);
+ g.font="13px system-ui,sans-serif";const at="Imagen: Esri, Maxar, Earthstar Geographics";const aw=g.measureText(at).width;g.fillStyle="rgba(255,255,255,.75)";g.fillRect(SAT_W-aw-14,SAT_H-22,aw+14,22);g.fillStyle="#222";g.fillText(at,SAT_W-aw-7,SAT_H-7);
+ return await new Promise((res,rej)=>{try{c.toBlob(b=>b?res(b):rej(new Error("blob")),"image/jpeg",0.92)}catch(e){rej(e)}})}
+async function addSatMap(){
+ const lat=num(reg.gps.lat),lng=num(reg.gps.lon);
+ if(!isFinite(lat)||!isFinite(lng)){toast("Primero captura la ubicación o escribe latitud y longitud");return}
+ const btn=$("#bSat");btn.disabled=true;btn.textContent="Descargando mapa…";
+ try{const blob=await satImage(lat,lng);const file=new File([blob],`mapa_${lat.toFixed(5)}_${lng.toFixed(5)}.jpg`,{type:"image/jpeg"});
+  const old=reg.mapa;reg.mapa=await storeImage(file);renderMapa();touch();if(old&&!old.local&&assets){try{await assets.delete(old.id)}catch(_){}}
+  $("#satHint").textContent="Mapa satelital agregado a la ubicación. Aparece en el registro y en el PDF.";
+ }catch(e){$("#satHint").textContent="Aquí no se pudo descargar el mapa satelital (la app de Claude lo bloquea o no hay señal). Toca 🌍 Abrir en Google Earth, toma captura de pantalla y adjúntala con 📎."}
+ finally{btn.disabled=false;btn.textContent="🛰 Mapa satelital automático"}}
+$("#bSat").addEventListener("click",addSatMap);
 function updMaps(){const la=num(reg.gps.lat),lo=num(reg.gps.lon),a=$("#mapsLink");
   if(isFinite(la)&&isFinite(lo)){a.href=`https://www.google.com/maps?q=${la},${lo}`;a.removeAttribute("aria-disabled");a.style.opacity=""}else{a.href="https://www.google.com/maps";a.style.opacity=".5"}}
 
@@ -632,23 +686,25 @@ function textW(x,t){return x.measureText(t).width}
 /* ---------- Imágenes ---------- */
 function readAsDataURL(b){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=ko;r.readAsDataURL(b)})}
 function loadImg(src){return new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=src})}
-const IDB=(()=>{let p;const open=()=>p||(p=new Promise((ok,ko)=>{const r=indexedDB.open("juvisa_calas",1);r.onupgradeneeded=()=>r.result.createObjectStore("img");r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)}));
-  const tx=(m,f)=>open().then(d=>new Promise((ok,ko)=>{const t=d.transaction("img",m),st=t.objectStore("img");const q=f(st);t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>ko(t.error)}));
-  return {put:(k,v)=>tx("readwrite",s=>s.put(v,k)),get:k=>tx("readonly",s=>s.get(k))}})();
-const idbUrls={};
-async function ensureIdb(list){let ch=false;for(const f of list){if(f&&f.idb&&!idbUrls[f.id]){try{const b=await IDB.get(f.id);if(b){idbUrls[f.id]=URL.createObjectURL(b);ch=true}}catch(_){}}}return ch}
 async function storeImage(file){
-  if(!assets&&window.indexedDB){try{const id="img_"+Date.now()+Math.random().toString(36).slice(2,6);await IDB.put(id,file);idbUrls[id]=URL.createObjectURL(file);return {id,idb:true}}catch(_){}}
   if(assets){try{const r=await assets.upload(file);return {id:r.id,url:r.url}}catch(e){toast("No se pudo subir a la nube ("+(e&&e.code||"error")+"); se queda solo en esta sesión")}}
-  const id="mem_"+Date.now()+Math.random().toString(36).slice(2,6);memImgs[id]=await readAsDataURL(file);return {id,url:memImgs[id],local:true};
+  const id="img_"+Date.now()+Math.random().toString(36).slice(2,6);
+  try{await idbPut(id,file);memImgs[id]=URL.createObjectURL(file);setTimeout(()=>ghSched(2000),0);return {id,idb:true,name:file.name||"foto.jpg",type:file.type||"image/jpeg"}}catch(_){}
+  memImgs[id]=await readAsDataURL(file);return {id,url:memImgs[id],local:true};
 }
-const imgSrc=f=>f.idb?(idbUrls[f.id]||""):f.local?(memImgs[f.id]||""):f.url;
+const imgSrc=f=>f.local?(memImgs[f.id]||""):f.idb?(memImgs[f.id]||f.remote||""):f.url;
+/* ---------- Base de datos del dispositivo (IndexedDB) para fotos ---------- */
+let _idb=null;function IDB(){return _idb||(_idb=new Promise((ok,ko)=>{const r=indexedDB.open("juvisa_gc",1);r.onupgradeneeded=()=>r.result.createObjectStore("img");r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)}))}
+async function idbPut(k,v){const d=await IDB();return new Promise((ok,ko)=>{const x=d.transaction("img","readwrite");x.objectStore("img").put(v,k);x.oncomplete=()=>ok();x.onerror=()=>ko(x.error)})}
+async function idbGet(k){const d=await IDB();return new Promise((ok,ko)=>{const x=d.transaction("img").objectStore("img").get(k);x.onsuccess=()=>ok(x.result);x.onerror=()=>ko(x.error)})}
+function imgsOf(r){return[...(r.fotos||[]),...(r.mapa?[r.mapa]:[])]}
+async function ensureImgs(){let n=0;for(const f of imgsOf(reg)){if(f.idb&&!memImgs[f.id]){try{const b=await idbGet(f.id);if(b){memImgs[f.id]=URL.createObjectURL(b);n++}}catch(_){}}}if(n){renderFotos();renderMapa()}}
 
 $("#fotoFile").addEventListener("change",async e=>{const fs=Array.from(e.target.files||[]);e.target.value="";if(!fs.length)return;
   $("#fotoMsg").textContent=`Subiendo ${fs.length} foto(s)…`;
   for(const f of fs){const s=await storeImage(f);reg.fotos.push({...s,caption:"",cala:reg.calas.length===1?"1":"",name:f.name||"foto"});renderFotos()}
   $("#fotoMsg").textContent="Fotos guardadas en su calidad original.";touch()});
-function renderFotos(){ensureIdb(reg.fotos.concat([reg.mapa])).then(ch=>{if(ch){renderFotos();renderMapa()}});
+function renderFotos(){
   $("#fotos").innerHTML=reg.fotos.map((f,i)=>`<div class="foto"><img src="${esc(imgSrc(f))}" alt="Foto ${i+1}" loading="lazy">
    <div class="fb"><input data-fi="${i}" data-ff="caption" value="${esc(f.caption)}" placeholder="Descripción de la foto" aria-label="Descripción foto ${i+1}">
    <div class="row" style="flex-wrap:nowrap"><select data-fi="${i}" data-ff="cala" aria-label="Cala de la foto ${i+1}"><option value="">General</option>${reg.calas.map((c,k)=>`<option value="${k+1}"${f.cala==String(k+1)?" selected":""}>Cala ${k+1}${c.est?" · "+esc(c.est):""}</option>`).join("")}</select>
@@ -670,37 +726,81 @@ $("#guia").innerHTML=`<thead><tr><th>Capa</th><th>% compactación</th><th>Prueba
  `</tbody>`;
 
 /* ---------- Guardado ---------- */
-function touch(){dirty=true;if(reg._example){reg._example=false;$("#exBanner").hidden=true}setStatus();try{localStorage.setItem("juvisa_gc_draft",JSON.stringify(serial()))}catch(_){}}
-function setStatus(){$("#status").textContent=dirty?"Cambios sin guardar":(reg.updated?"Guardado "+new Date(reg.updated).toLocaleString("es-MX",{dateStyle:"short",timeStyle:"short"}):"Sin guardar")}
+function touch(){dirty=true;if(reg._example){reg._example=false;$("#exBanner").hidden=true}setStatus();try{localStorage.setItem("juvisa_gc_draft",JSON.stringify({...serial(),_dirty:true}))}catch(_){}editSeq++;schedAuto()}
+let autoT=null,editSeq=0,unsubLive=null,firstLive=true;
+function startLive(){if(!coll||unsubLive)return;
+  try{unsubLive=coll.onSnapshot(snap=>{
+    const regs=[];let cfg=null;
+    for(const d of snap.docs){if(!d.exists)continue;const x=d.data();if(d.id==="cfg_obras")cfg=x;else if(x&&x.calas)regs.push({...x,id:d.id})}
+    regs.sort((a,b)=>(b.updated||0)-(a.updated||0));cacheSet(regs);saved=mergePend(regs);if(pendCount())syncPend();
+    if(cfg&&Array.isArray(cfg.lista)&&cfg.lista.length&&!obT_pending()&&!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest("#obrasList"))&&JSON.stringify(cfg.lista)!==JSON.stringify(obras)){
+      obras=JSON.parse(JSON.stringify(cfg.lista));try{localStorage.setItem("juvisa_gc_obras",JSON.stringify(obras))}catch(_){}obraOptions();renderObras();renderAnalisis()}
+    const first=firstLive;firstLive=false;
+    if(reg&&reg.id&&!snap.metadata.hasPendingWrites){const r=regs.find(x=>x.id===reg.id);
+      if(r&&(r.updated||0)>(reg.updated||0)&&!autoT&&(!dirty||first)){reg=normalize(JSON.parse(JSON.stringify(r)));dirty=false;try{localStorage.setItem("juvisa_gc_draft",JSON.stringify(r))}catch(_){}renderAll();setStatus();toast("Registro actualizado con lo último guardado")}
+      else if(first&&dirty&&!reg._example)schedAuto();
+    }else if(first&&reg&&!reg.id&&dirty&&!reg._example)schedAuto();
+    else if(first&&reg&&reg._example&&regs.length){reg=normalize(JSON.parse(JSON.stringify(regs[0])));dirty=false;renderAll();setStatus();toast("Abierto tu último registro")}
+    renderRegs();
+  },e=>{unsubLive=null;setTimeout(startLive,5000)})}catch(_){unsubLive=null}}
+function schedAuto(){clearTimeout(autoT);autoT=null;if(!reg||reg._example)return;autoT=setTimeout(()=>{autoT=null;save(true)},1500)}
+function flush(){if(autoT){clearTimeout(autoT);autoT=null;save(true)}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flush();else if(coll){loadList();if(!unsubLive)startLive()}});
+window.addEventListener("pagehide",flush);
+function setStatus(){const pc=pendCount();$("#status").textContent=(navigator.onLine===false?"Sin internet · ":"")+(pc?pc+" por subir · ":"")+(dirty?(autoT?"Guardando…":"Cambios sin guardar"):(reg.updated?"Guardado automático "+new Date(reg.updated).toLocaleString("es-MX",{dateStyle:"short",timeStyle:"short"}):"Sin guardar"))}
 function serial(){const o=JSON.parse(JSON.stringify(reg));delete o._example;o.fotos=(o.fotos||[]).filter(f=>!f.local);if(o.mapa&&o.mapa.local)o.mapa=null;return o}
-async function save(){
-  if(!reg.id)reg.id="reg_"+Date.now();reg.updated=Date.now();const data=serial();
+async function save(silent){
+  silent=silent===true;if(!silent){clearTimeout(autoT);autoT=null}if(silent&&reg._example)return;
+  if(!reg.id)reg.id="reg_"+Date.now();reg.updated=Date.now();const data=serial();const seq=editSeq,cur=reg;
   try{
-    if(coll){await coll.doc(reg.id).set(data)}
-    else{const all=lsList().filter(r=>r.id!==reg.id);all.unshift(data);localStorage.setItem("juvisa_gc_regs",JSON.stringify(all))}
-    dirty=false;setStatus();toast("Formato guardado");loadList();
-    if(reg.fotos.some(f=>f.local))toast("Guardado. Las fotos marcadas «solo en esta sesión» no se guardaron.");
-  }catch(e){toast("No se pudo guardar: "+(e&&e.message||"error de almacenamiento"))}
+    if(coll){if(navigator.onLine===false)throw{offline:1};try{await withTO(coll.doc(reg.id).set(data))}catch(_){throw{offline:1}}}
+    else{const all=lsList().filter(r=>r.id!==reg.id);all.unshift(data);localStorage.setItem("juvisa_gc_regs",JSON.stringify(all));ghSched(3000)}
+    if(cur===reg&&seq===editSeq){dirty=false;try{localStorage.setItem("juvisa_gc_draft",JSON.stringify(data))}catch(_){}}setStatus();if(!silent)toast("Registro guardado");loadList();
+    if(!silent&&reg.fotos.some(f=>f.local))toast("Guardado. Las fotos marcadas «solo en esta sesión» no se guardaron.");
+  }catch(e){
+    if(e&&e.offline){const p=pendGet();p[data.id]=data;pendSet(p);if(cur===reg&&seq===editSeq){dirty=false;try{localStorage.setItem("juvisa_gc_draft",JSON.stringify(data))}catch(_){}}
+      saved=mergePend(saved.filter(r=>r.id!==data.id));cacheSet(saved);renderRegs();setStatus();if(!silent)toast("Sin internet: guardado en este dispositivo. Se sube solo al regresar la señal.");return}
+    if(silent){if(cur===reg)$("#status").textContent="No se pudo guardar solo · toca Guardar registro"}else toast("No se pudo guardar: "+(e&&e.message||"error de almacenamiento"))}
 }
+/* ---------- Sin internet: base local y subida automática ---------- */
+function withTO(p,ms){return Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error("timeout")),ms||8000))])}
+function pendGet(){try{return JSON.parse(localStorage.getItem("juvisa_gc_pend")||"{}")||{}}catch(_){return{}}}
+function pendSet(p){try{localStorage.setItem("juvisa_gc_pend",JSON.stringify(p))}catch(_){}}
+function pendCount(){return Object.keys(pendGet()).length}
+function cacheGet(){try{return JSON.parse(localStorage.getItem("juvisa_gc_cache")||"[]")}catch(_){return[]}}
+function cacheSet(l){try{localStorage.setItem("juvisa_gc_cache",JSON.stringify(l))}catch(_){}}
+function mergePend(list){const p=pendGet();let out=list.filter(r=>!p[r.id]);for(const id in p){if(!p[id]._del)out.push({...p[id],id})}out.sort((a,b)=>(b.updated||0)-(a.updated||0));return out}
+let syncing=false;
+async function syncPend(){if(!coll||syncing||navigator.onLine===false)return;const p=pendGet();const ids=Object.keys(p);if(!ids.length)return;syncing=true;let n=0;
+  for(const id of ids){const it=p[id];try{if(it._del)await withTO(coll.doc(id).delete());else await withTO(coll.doc(id).set(it));const q=pendGet();if(q[id]&&q[id].updated===it.updated)delete q[id];pendSet(q);n++}catch(_){break}}
+  syncing=false;setStatus();if(n){toast(n+" cambio(s) hechos sin internet ya se subieron");loadList()}}
+window.addEventListener("online",()=>{setTimeout(syncPend,1500)});
+window.addEventListener("offline",()=>{setStatus();toast("Sin internet: sigue capturando, todo se guarda en este dispositivo")});
+setInterval(syncPend,30000);
 function lsList(){try{return JSON.parse(localStorage.getItem("juvisa_gc_regs")||"[]")}catch(_){return[]}}
 async function loadList(){
-  try{if(coll){const s=await coll.get();saved=s.docs.map(d=>({...d.data(),id:d.id})).filter(r=>r&&r.calas)}else saved=lsList()}catch(_){saved=lsList()}
+  try{if(coll){if(navigator.onLine===false)throw 0;const s=await withTO(coll.get());saved=s.docs.map(d=>({...d.data(),id:d.id})).filter(r=>r&&r.calas);cacheSet(saved)}else saved=lsList()}catch(_){saved=coll?cacheGet():lsList()}
+  saved=mergePend(saved);
   saved.sort((a,b)=>(b.updated||0)-(a.updated||0));renderRegs();
 }
 function renderRegs(){
-  $("#storeMode").textContent="Guardados en este iPhone. Haz un respaldo de vez en cuando.";
-  $("#regs").innerHTML=saved.length?saved.map(r=>{const sts=r.calas.map(c=>calc(c).st);const nb=sts.filter(s=>s==="bad").length,na=sts.filter(s=>s==="acc").length;
+  $("#storeMode").textContent=!coll?(ghTok()?"Guardados en este dispositivo y respaldados en la nube.":"Guardados en este dispositivo.")+" "+saved.length+" registro(s).":(coll?(unsubLive?"Sincronizado en vivo entre tu iPhone y tu computadora.":"Se guardan solos en tu cuenta de Claude: los ves desde el iPhone o la computadora."):"Se guardan solos en este navegador.")+" "+saved.length+" registro(s).";
+  $("#regCnt").textContent=saved.length?"("+saved.length+")":"";
+  const q=($("#regQ").value||"").trim().toLowerCase();
+  const list=q?saved.filter(r=>[r.obra,r.fecha,r.hora,r.ubicacion,...(r.calas||[]).flatMap(c=>[c.est,c.capa&&CAPAS[c.capa]?CAPAS[c.capa].n:c.capa,c.lado])].filter(Boolean).join(" ").toLowerCase().includes(q)):saved;
+  $("#regs").innerHTML=!list.length&&saved.length?`<p class="hint">Ningún registro coincide con «${esc(q)}».</p>`:list.length?list.map(r=>{const sts=r.calas.map(c=>calc(c).st);const nb=sts.filter(s=>s==="bad").length,na=sts.filter(s=>s==="acc").length;
     return `<div class="reg${r.id===reg.id?" cur":""}"><div style="min-width:0"><h3>${esc(r.obra)||"Sin obra"} · ${esc(r.fecha)} ${esc(r.hora)}</h3>
     <div class="meta">${r.calas.length} cala(s) · ${esc(r.calas.map(c=>c.est).filter(Boolean).join(", "))||"sin estaciones"} ${nb?`· <span class="chip bad">${nb} no cumple</span>`:""} ${na?`· <span class="chip acc">${na} acept. c/obs.</span>`:""}</div></div>
     <div class="row" style="flex-wrap:nowrap"><button class="btn sm" type="button" data-open="${esc(r.id)}">Abrir</button><button class="btn sm" type="button" data-dup="${esc(r.id)}">Copiar</button><button class="btn sm danger" type="button" data-del="${esc(r.id)}">Borrar</button></div></div>`}).join(""):`<p class="hint">Todavía no has guardado formatos. Llena las calas y toca «Guardar formato».</p>`;
 }
-$("#regs").addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;
-  if(b.dataset.open){const r=saved.find(x=>x.id===b.dataset.open);if(!r)return;if(dirty&&!b.dataset.armed){b.dataset.armed="1";b.textContent="Hay cambios sin guardar · ¿abrir?";return}
+$("#regQ").addEventListener("input",renderRegs);
+$("#regs").addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.open||b.dataset.dup)flush();
+  if(b.dataset.open){const r=saved.find(x=>x.id===b.dataset.open);if(!r)return;
     reg=normalize(JSON.parse(JSON.stringify(r)));dirty=false;renderAll();setStatus();$('[data-t="formato"]').click();toast("Formato abierto")}
   if(b.dataset.dup){const r=saved.find(x=>x.id===b.dataset.dup);if(!r)return;const t=today();const c=normalize(JSON.parse(JSON.stringify(r)));
     Object.assign(c,{id:null,fecha:t.f,hora:t.h,fotos:[],mapa:null,updated:null});c.calas=c.calas.map(x=>({...newCala(x),capa:x.capa}));reg=c;dirty=true;renderAll();setStatus();$('[data-t="formato"]').click();toast("Copia lista: mismos datos generales, calas en blanco")}
   if(b.dataset.del){if(!b.dataset.armed){b.dataset.armed="1";b.textContent="¿Borrar de verdad?";setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent="Borrar"}},3500);return}
-    try{if(coll)await coll.doc(b.dataset.del).delete();else localStorage.setItem("juvisa_gc_regs",JSON.stringify(lsList().filter(r=>r.id!==b.dataset.del)))}catch(_){toast("No se pudo borrar")}
+    try{if(coll){try{if(navigator.onLine===false)throw 0;await withTO(coll.doc(b.dataset.del).delete())}catch(_){const p=pendGet();p[b.dataset.del]={_del:true,updated:Date.now()};pendSet(p);cacheSet(cacheGet().filter(r=>r.id!==b.dataset.del))}}else{localStorage.setItem("juvisa_gc_regs",JSON.stringify(lsList().filter(r=>r.id!==b.dataset.del)));const tb=tombGet();tb[b.dataset.del]=Date.now();tombSet(tb);ghSched(1500)}}catch(_){toast("No se pudo borrar")}
     if(reg.id===b.dataset.del)reg.id=null;loadList();toast("Formato borrado")}
 });
 function normalize(r){const b=blankReg();const o=Object.assign(b,r);o.equipo=Object.assign(blankReg().equipo,r.equipo||{});o.gps=Object.assign(blankReg().gps,r.gps||{});o.fotos=r.fotos||[];o.calas=(r.calas&&r.calas.length?r.calas:[newCala()]).map(c=>{const n=Object.assign(newCala(),c);if(/^Cuerpo ([AB])$/.test(n.lado)){n.cuerpo=n.lado.slice(-1);n.lado="Eje"}return n});return o}
@@ -709,10 +809,9 @@ function normalize(r){const b=blankReg();const o=Object.assign(b,r);o.equipo=Obj
 $("#bSave").addEventListener("click",save);
 $("#bAdd").addEventListener("click",()=>{reg.calas.push(newCala(reg.calas[reg.calas.length-1]));touch();renderTable();renderAnalisis();drawCroquis();renderFotos();
   const i=reg.calas.length-1;const el=$(`#c${i}_est`);if(el){el.focus();el.scrollIntoView({block:"nearest",inline:"center"})}toast(`Cala ${i+1} agregada`)});
-function nuevo(){const prev=reg;reg=blankReg();if(prev&&!prev._example){["obra","ubicacion"].forEach(k=>reg[k]=prev[k]);reg.equipo={...prev.equipo};reg.gps.origen=prev.gps.origen;reg.gps.destino=prev.gps.destino}
-  dirty=false;renderAll();setStatus();$('[data-t="formato"]').click();toast("Formato nuevo con fecha y hora de hoy")}
-$("#bNew").addEventListener("click",e=>{const b=e.currentTarget;if(dirty&&!b.dataset.armed){b.dataset.armed="1";b.textContent="Sin guardar · ¿seguir?";setTimeout(()=>{delete b.dataset.armed;b.textContent="Nuevo formato"},3500);return}
-  delete b.dataset.armed;b.textContent="Nuevo formato";nuevo()});
+function nuevo(){flush();const prev=reg;reg=blankReg();if(prev&&!prev._example){["obra","ubicacion"].forEach(k=>reg[k]=prev[k]);reg.equipo={...prev.equipo};reg.gps.origen=prev.gps.origen;reg.gps.destino=prev.gps.destino}
+  dirty=false;renderAll();setStatus();$('[data-t="formato"]').click();toast("Registro nuevo con fecha y hora de hoy")}
+$("#bNew").addEventListener("click",()=>{nuevo()});
 $("#exNew").addEventListener("click",()=>{reg._example=true;nuevo()});
 $("#bPdf").addEventListener("click",makePdf);
 
@@ -835,8 +934,8 @@ function renderObras(){
     <div class="row" style="justify-content:space-between"><span class="hint">${o.ini&&o.fin?`${esc(o.ini)} a ${esc(o.fin)} · ${fmt(Math.abs(parseEst(o.fin)-parseEst(o.ini))/1000,3)} km`:"Faltan cadenamientos"}</span>
     <div class="row"><button class="btn sm" type="button" data-ouse="${i}">Usar en el formato</button><button class="btn sm danger" type="button" data-odel="${i}">Borrar</button></div></div></div>`).join("")||`<p class="hint">No hay obras. Toca «Agregar obra».</p>`;
 }
-let obT;function saveObras(){try{localStorage.setItem("juvisa_gc_obras",JSON.stringify(obras))}catch(_){}
-  clearTimeout(obT);obT=setTimeout(async()=>{if(coll){try{await coll.doc("cfg_obras").set({lista:obras,updated:Date.now()})}catch(_){}}},800)}
+let obT,obPend=false;function obT_pending(){return obPend}function saveObras(){try{localStorage.setItem("juvisa_gc_obras",JSON.stringify(obras));localStorage.setItem("juvisa_gc_obras_upd",String(Date.now()))}catch(_){}ghSched(3000);
+  clearTimeout(obT);obPend=true;obT=setTimeout(async()=>{if(coll){try{await coll.doc("cfg_obras").set({lista:obras,updated:Date.now()})}catch(_){}}obPend=false},800)}
 $("#obrasList").addEventListener("input",e=>{const t=e.target;if(t.dataset.ob===undefined)return;const o=obras[+t.dataset.ob];o[t.dataset.of]=t.value;saveObras();
   if(o.id===reg.obraId){obraOptions();if(t.dataset.of==="nombre"){reg.obra=o.nombre;$("#obra").value=o.nombre}renderAnalisis();drawCroquis()}
   const h=t.closest(".obra").querySelector(".hint");if(h)h.textContent=o.ini&&o.fin?`${o.ini} a ${o.fin} · ${fmt(Math.abs(parseEst(o.fin)-parseEst(o.ini))/1000,3)} km`:"Faltan cadenamientos"});
@@ -855,53 +954,98 @@ function resumen(){const L=[`*JUVISA · Grado de compactación*`,`${reg.obra||""
   L.push(``,`Elaboró: ${reg.elaboro}`);return L.join("\n")}
 function showPdfSheet(){const s=$("#pdfSheet");$("#pdfName").textContent=`${lastPdf.name} · ${(lastPdf.blob.size/1048576).toFixed(1)} MB`;
   $("#waLink").href="https://wa.me/?text="+encodeURIComponent(resumen());
-  $("#gmLink").href="https://mail.google.com/mail/?view=cm&fs=1&su="+encodeURIComponent(`Grado de compactación · ${reg.obra||""} · ${(reg.fecha||"").split("-").reverse().join("/")}`)+"&body="+encodeURIComponent(resumen().replace(/\*/g,""));$("#pdfNoDl").hidden=true;s.hidden=false}
-function pdfFile(){return new File([lastPdf.blob],lastPdf.name,{type:"application/pdf"})}
-async function sharePdf(msg){const f=pdfFile();if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:lastPdf.name});toast(msg)}catch(e){if(e&&e.name!=="AbortError")toast("No se pudo compartir")}}else{dlPdf();toast("Tu navegador no comparte archivos: se descargó el PDF")}}
-function dlPdf(){const u=URL.createObjectURL(lastPdf.blob),a=document.createElement("a");a.href=u;a.download=lastPdf.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000)}
-function printPdf(){const u=URL.createObjectURL(lastPdf.blob);const w=window.open(u,"_blank");if(!w)dlPdf();toast("En el PDF abierto toca Compartir → Imprimir")}
-async function savePdf(msg){if(!lastPdf)return;if(!downloads){if(msg==="PDF guardado")dlPdf();else await sharePdf(msg);return}try{await downloads.save({filename:lastPdf.name,data:lastPdf.blob});toast(msg)}catch(e){toast(e&&e.code==="declined"?"Cancelado":"No se pudo entregar el PDF ("+(e&&e.code||"error")+")")}}
-document.addEventListener("click",e=>{if(e.target.closest("#bPdfSave"))savePdf("PDF guardado");else if(e.target.closest("#bPdfWa"))savePdf("Elige WhatsApp en el menú para compartir");else if(e.target.closest("#bPdfGm"))savePdf("Elige Gmail en el menú para compartir");else if(e.target.closest("#bPdfPrint"))printPdf();else if(e.target.closest("#pdfClose")||e.target.id==="pdfSheet")$("#pdfSheet").hidden=true});
+  $("#gmLink").href="https://mail.google.com/mail/?view=cm&fs=1&su="+encodeURIComponent(`Grado de compactación · ${reg.obra||""} · ${(reg.fecha||"").split("-").reverse().join("/")}`)+"&body="+encodeURIComponent(resumen().replace(/\*/g,""));$("#pdfNoDl").hidden=!!downloads;$("#bPdfSave").disabled=$("#bPdfWa").disabled=$("#bPdfGm").disabled=false;$("#pdfNoDl").hidden=true;s.hidden=false}
+async function savePdf(msg){if(!lastPdf)return;
+  if(!downloads){const f=new File([lastPdf.blob],lastPdf.name,{type:"application/pdf"});
+    if(/iPhone|iPad|Android/.test(navigator.userAgent)&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:lastPdf.name})}catch(_){}return}
+    const a=document.createElement("a");a.href=URL.createObjectURL(lastPdf.blob);a.download=lastPdf.name;document.body.appendChild(a);a.click();a.remove();toast("PDF descargado");return}try{await downloads.save({filename:lastPdf.name,data:lastPdf.blob});toast(msg)}catch(e){toast(e&&e.code==="declined"?"Cancelado":"No se pudo entregar el PDF ("+(e&&e.code||"error")+")")}}
+document.addEventListener("click",e=>{if(e.target.closest("#bPdfSave"))savePdf("PDF guardado");else if(e.target.closest("#bPdfWa"))savePdf("Elige WhatsApp en el menú para compartir");else if(e.target.closest("#bPdfGm"))savePdf("Elige Gmail en el menú para compartir");else if(e.target.closest("#pdfClose")||e.target.id==="pdfSheet")$("#pdfSheet").hidden=true});
 
-/* ---------- GPS ---------- */
-$("#gpsBtn").addEventListener("click",()=>{if(!navigator.geolocation){toast("Este navegador no tiene GPS");return}
-  const b=$("#gpsBtn");b.disabled=true;b.textContent="Buscando señal…";
-  navigator.geolocation.getCurrentPosition(p=>{const la=p.coords.latitude.toFixed(6),lo=p.coords.longitude.toFixed(6);reg.gps.lat=la;reg.gps.lon=lo;$("#lat").value=la;$("#lon").value=lo;
-    $("#gpsMsg").textContent=`Precisión ±${Math.round(p.coords.accuracy)} m`;touch();drawCroquis();updMaps();b.disabled=false;b.textContent="📍 Tomar GPS aquí";toast("Ubicación tomada")},
-   e=>{b.disabled=false;b.textContent="📍 Tomar GPS aquí";toast(e.code===1?"Permite la ubicación: Ajustes → Privacidad → Localización → Sitios web de Safari":"No se obtuvo señal GPS, intenta de nuevo")},{enableHighAccuracy:true,timeout:20000,maximumAge:0})});
-
-/* ---------- Respaldo ---------- */
-$("#bkExport").addEventListener("click",async()=>{toast("Preparando respaldo…");
-  const regs=lsList();const ids=new Set();regs.concat([serial()]).forEach(r=>{(r.fotos||[]).concat([r.mapa]).forEach(f=>{if(f&&f.idb)ids.add(f.id)})});
-  const imgs={};for(const id of ids){try{const b=await IDB.get(id);if(b)imgs[id]=await readAsDataURL(b)}catch(_){}}
-  const data=JSON.stringify({app:"calas-juvisa",v:1,fecha:new Date().toISOString(),obras,registros:regs,imgs});
-  const name=`Respaldo_Calas_JUVISA_${today().f}.json`;const f=new File([data],name,{type:"application/json"});
-  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:name})}catch(_){}}else{const u=URL.createObjectURL(f),a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),60000)}});
-$("#bkFile").addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
-  try{const d=JSON.parse(await f.text());if(d.app!=="calas-juvisa")throw 0;
-    for(const [id,url] of Object.entries(d.imgs||{})){const b=await (await fetch(url)).blob();await IDB.put(id,b)}
-    const cur=lsList(),map=new Map(cur.map(r=>[r.id,r]));(d.registros||[]).forEach(r=>{const c=map.get(r.id);if(!c||(r.updated||0)>(c.updated||0))map.set(r.id,r)});
-    localStorage.setItem("juvisa_gc_regs",JSON.stringify([...map.values()]));if(Array.isArray(d.obras)&&d.obras.length){obras=d.obras;saveObras();obraOptions();renderObras()}
-    loadList();toast(`Respaldo restaurado: ${(d.registros||[]).length} formato(s)`)}catch(_){toast("Ese archivo no es un respaldo de Calas JUVISA")}});
+/* ---------- Respaldo en la nube (GitHub, igual que la Bitácora) ---------- */
+const GHR={repo:"ingezequieljuv/CALAS-TERRACERIAS",branch:"registros",file:"registros.json",dir:"fotos/"};
+const RAWG=`https://raw.githubusercontent.com/${GHR.repo}/${GHR.branch}/`;
+function ghTok(){let v=null;try{v=localStorage.getItem("ct_ghtoken")||localStorage.getItem("bit_ghtoken")}catch(_){}if(!v)return"";try{const p=JSON.parse(v);return typeof p==="string"?p:""}catch(_){return v}}
+function tombGet(){try{return JSON.parse(localStorage.getItem("juvisa_gc_borr")||"{}")||{}}catch(_){return{}}}
+function tombSet(t){try{localStorage.setItem("juvisa_gc_borr",JSON.stringify(t))}catch(_){}}
+async function ghF(path,opt={}){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),opt.timeout||45000);
+  try{return await fetch("https://api.github.com/repos/"+GHR.repo+path,{cache:"no-store",...opt,signal:ac.signal,headers:{Accept:"application/vnd.github+json",Authorization:"Bearer "+ghTok(),"X-GitHub-Api-Version":"2022-11-28",...(opt.body?{"Content-Type":"application/json"}:{})}})}finally{clearTimeout(tm)}}
+const b64blob=blob=>new Promise((ok,ko)=>{const f=new FileReader();f.onload=()=>ok(String(f.result).split(",")[1]);f.onerror=ko;f.readAsDataURL(blob)});
+const b64txt=s=>b64blob(new Blob([s],{type:"application/json"}));
+async function ghGetFile(){const r=await ghF("/contents/"+GHR.file+"?ref="+GHR.branch);if(r.status===404)return null;if(!r.ok)throw{status:r.status};
+  const j=await r.json();let txt;if(j.content&&j.encoding==="base64"){const bin=atob(j.content.replace(/\s/g,""));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);txt=new TextDecoder().decode(u)}
+  else{const d=await fetch(j.download_url+"?t="+Date.now(),{cache:"no-store"});txt=await d.text()}return{data:JSON.parse(txt),sha:j.sha}}
+async function ghPutRaw(path,b64,msg,sha){const body={message:msg,content:b64,branch:GHR.branch};if(sha)body.sha=sha;const r=await ghF("/contents/"+path,{method:"PUT",body:JSON.stringify(body),timeout:120000});
+  if(!r.ok){const j=await r.json().catch(()=>({}));throw{status:r.status,message:j.message||""}}const j=await r.json();return j.content&&j.content.sha}
+let ghBusy=false,ghAgain=false,ghT=null;
+function ghSched(ms){clearTimeout(ghT);ghT=setTimeout(ghSync,ms||3000)}
+let ghForce=false;function ghUi(msg){const tk=ghForce?"":ghTok();$("#ghTokRow").hidden=!!tk;$("#ghNow").hidden=!tk;$("#ghState").textContent=tk?"☁️ Respaldo en la nube activado":"☁️ Respaldo en la nube (sin activar)";if(msg!=null)$("#ghMsg").textContent=msg}
+async function ghSync(){
+  if(!ghTok()||ghForce){ghUi();return}if(navigator.onLine===false){ghUi("Sin internet: se sube solo al regresar la señal.");return}
+  if(ghBusy){ghAgain=true;return}ghBusy=true;ghUi("🔄 Sincronizando…");
+  try{
+    let rem=null;try{rem=await ghGetFile()}catch(e){if(e&&e.status===401){try{localStorage.removeItem("ct_ghtoken")}catch(_){}ghForce=true;ghUi("El token no sirve o ya venció. Pega uno nuevo.");return}throw e}
+    if(!rem){const c=await ghF("");if(!c.ok){ghForce=true;ghUi("Ese token no tiene acceso al repositorio CALAS-TERRACERIAS. Pega un token que sí lo tenga.");return}}
+    const R=rem?rem.data:{regs:{},borr:{},obras:null,obrasUpd:0};R.regs=R.regs||{};R.borr=R.borr||{};
+    const tb=tombGet();for(const k in R.borr)tb[k]=Math.max(tb[k]||0,R.borr[k]);
+    const loc={};for(const r of lsList())loc[r.id]=r;
+    const out={};let pulled=0,changedRemote=false;
+    for(const id of new Set([...Object.keys(loc),...Object.keys(R.regs)])){
+      const a=loc[id],b=R.regs[id];let w=a&&b?((a.updated||0)>=(b.updated||0)?a:b):(a||b);
+      if(tb[id]&&tb[id]>=(w.updated||0))continue;
+      if(w===b&&(!a||(b.updated||0)>(a.updated||0)))pulled++;
+      out[id]=JSON.parse(JSON.stringify(w));}
+    // subir fotos que solo están en este dispositivo
+    for(const id in out){for(const f of imgsOf(out[id])){if(f.idb&&!f.remote){const blob=await idbGet(f.id).catch(()=>null);if(!blob)continue;
+      const ext=(f.type||"").includes("png")?"png":"jpg";const p=GHR.dir+f.id+"."+ext;
+      ghUi("🔄 Subiendo fotos…");await ghPutRaw(p,await b64blob(blob),"Foto compactación "+f.id);f.remote=RAWG+p;
+      if(reg&&reg.id===id){const g=imgsOf(reg).find(x=>x.id===f.id);if(g)g.remote=f.remote}}}}
+    for(const id in out){const b=R.regs[id];if(!b||JSON.stringify(b)!==JSON.stringify(out[id]))changedRemote=true}
+    for(const id in R.regs)if(!out[id])changedRemote=true;
+    for(const k in tb)if(!R.borr[k])changedRemote=true;
+    let ob=null;try{ob=JSON.parse(localStorage.getItem("juvisa_gc_obras")||"null")}catch(_){}const obU=+(localStorage.getItem("juvisa_gc_obras_upd")||0);
+    let obras2=R.obras,obU2=R.obrasUpd||0;if(ob&&obU>obU2){obras2=ob;obU2=obU;changedRemote=true}
+    else if(R.obras&&obU2>obU&&!obPend){obras=R.obras;try{localStorage.setItem("juvisa_gc_obras",JSON.stringify(obras));localStorage.setItem("juvisa_gc_obras_upd",String(obU2))}catch(_){}obraOptions();renderObras();renderAnalisis()}
+    const list=Object.values(out).sort((a,b)=>(b.updated||0)-(a.updated||0));
+    try{localStorage.setItem("juvisa_gc_regs",JSON.stringify(list))}catch(_){}tombSet(tb);
+    if(changedRemote){const data={regs:out,borr:tb,obras:obras2,obrasUpd:obU2,updated:Date.now()};
+      try{await ghPutRaw(GHR.file,await b64txt(JSON.stringify(data)),"Registros de compactación",rem&&rem.sha)}
+      catch(e){if(e&&(e.status===409||e.status===422)){ghBusy=false;ghAgain=false;return ghSched(1500)}throw e}}
+    saved=list;
+    if(reg&&reg.id&&out[reg.id]&&(out[reg.id].updated||0)>(reg.updated||0)&&!autoT&&!dirty){reg=normalize(JSON.parse(JSON.stringify(out[reg.id])));renderAll();setStatus();toast("Registro actualizado con lo último guardado")}
+    else if(reg&&reg.id&&!out[reg.id]&&tb[reg.id]){reg.id=null}
+    else if(reg&&reg._example&&list.length&&!ghFirstDone){reg=normalize(JSON.parse(JSON.stringify(list[0])));dirty=false;renderAll();setStatus()}
+    ghFirstDone=true;renderRegs();
+    ghUi("✅ Al día · "+new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"}));if(pulled)toast(pulled+" registro(s) nuevos o actualizados desde tu otro dispositivo");
+  }catch(e){ghUi("No se pudo sincronizar ("+((e&&e.status)||"sin señal")+"). Se reintenta solo.")}
+  finally{ghBusy=false;if(ghAgain){ghAgain=false;ghSched(1000)}}}
+let ghFirstDone=false;
+$("#ghTokOk").addEventListener("click",async()=>{const v=$("#ghTok").value.trim();if(!/^(github_pat_|ghp_)\w+/.test(v)){toast("Ese no parece un token de GitHub");return}
+  try{localStorage.setItem("ct_ghtoken",JSON.stringify(v))}catch(_){}ghForce=false;$("#ghTok").value="";ghUi("");ghSync()});
+$("#ghNow").addEventListener("click",()=>ghSync());
+window.addEventListener("online",()=>ghSched(1500));
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")ghSched(800)});
+setInterval(()=>{if(document.visibilityState==="visible")ghSync()},60000);
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 
 /* ---------- Inicio ---------- */
 (function boot(){
   try{const o=JSON.parse(localStorage.getItem("juvisa_gc_obras")||"null");if(Array.isArray(o)&&o.length)obras=o}catch(_){}
   let d=null;try{d=JSON.parse(localStorage.getItem("juvisa_gc_draft")||"null")}catch(_){}
-  if(d&&d.calas){reg=normalize(d);dirty=true}else reg=exampleReg();
+  if(d&&d.calas){const dd=!!d._dirty||!d.id;delete d._dirty;reg=normalize(d);delete reg._dirty;dirty=dd}else reg=exampleReg();
   renderAll();setStatus();
   try{const t=localStorage.getItem("juvisa_gc_tab");if(t&&t!=="formato"){const b=$(`[data-t="${t}"]`);if(b)b.click()}}catch(_){}
-  saved=lsList();renderRegs();
-  if(false){
+  saved=mergePend(lsList().length?lsList():cacheGet());renderRegs();ghUi("");setTimeout(ghSync,800);
+  if(window.claude&&claude.use){
     (async()=>{try{const [dbx,user]=await Promise.all([claude.use("db"),claude.use("user")]);if(dbx&&user){const uid=await user.id();if(uid){db=dbx;coll=db.collection("data/users/"+uid);mode="cloud";
       // migrar guardados locales
       const loc=lsList();for(const r of loc){try{await coll.doc(r.id).set(r)}catch(_){}}if(loc.length){try{localStorage.removeItem("juvisa_gc_regs")}catch(_){}}
       try{const od=await coll.doc("cfg_obras").get();if(od.exists&&Array.isArray(od.data().lista)&&od.data().lista.length){obras=od.data().lista;try{localStorage.setItem("juvisa_gc_obras",JSON.stringify(obras))}catch(_){}obraOptions();renderObras();renderAnalisis()}else saveObras()}catch(_){}
-      loadList()}}}catch(_){}})();
+      loadList();startLive();syncPend()}}}catch(_){}})();
     claude.use("assets").then(a=>{assets=a}).catch(()=>{});
     claude.use("downloads").then(a=>{downloads=a}).catch(()=>{});
   }
 })();
 })();
 </script>
+
 </body></html>
