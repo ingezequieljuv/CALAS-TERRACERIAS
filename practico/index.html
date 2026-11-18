@@ -264,7 +264,7 @@ const REC_ALTO=['Verificar que la M.V.S.M. sea del mismo material y de la prueba
 function mvTxt(n){return n&&n.mv?f(n.mv[0],0)+' a '+f(n.mv[1],0)+' kg/m³':''}
 $('capa').innerHTML=Object.keys(NORMA).map(k=>`<option>${k}</option>`).join('');
 $('tablaNorma').innerHTML='<tr><th>Capa</th><th>Norma</th><th>Rango que cumple</th></tr>'+Object.entries(NORMA).map(([k,n])=>`<tr><td>${k}<div class="nref">SCT ${n.ref}</div><div class="nref">M.V.S.M. típica: ${mvTxt(n)} · ${n.pr}</div></td><td>${n.req}%${n.tol?' ± '+n.tol:' mín.'}</td><td>${rango(n)}</td></tr>`).join('')+
- '<tr><td colspan="3" class="nref" style="padding-top:8px">Fuera del rango sale en rojo. Sub-base, base, desplante y relleno solo piden mínimo; la norma no fija máximo. La norma no da un rango de M.V.S.M. (depende del material y sale del Proctor del laboratorio); los valores típicos son solo de referencia para detectar un Proctor que no corresponde. Si tu proyecto marca otro valor, manda el proyecto.</td></tr>';
+ '<tr><td colspan="3" class="nref" style="padding-top:8px">Abajo del mínimo sale en rojo con recomendaciones. Arriba del mínimo sale en verde, con una nota de cuánto pasa de lo requerido. Sub-base, base, desplante y relleno solo piden mínimo; la norma no fija máximo. La norma no da un rango de M.V.S.M. (depende del material y sale del Proctor del laboratorio); los valores típicos son solo de referencia para detectar un Proctor que no corresponde. Si tu proyecto marca otro valor, manda el proyecto.</td></tr>';
 
 function lsGet(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
@@ -287,8 +287,10 @@ function calc(v){
 }
 function normaDe(capa){return NORMA[capa]||null}
 function minimo(d){return d.req==null?null:d.req-(d.tol||0)}
-function cumple(d){const m=minimo(d);if(m==null||d.pc==null)return null;const p=Math.round(d.pc*10)/10,mx=maximo(d);return p>=m&&(mx==null||p<=mx)}
-function estado(d){const c=cumple(d);if(c!==false)return c;return Math.round(d.pc*10)/10<minimo(d)?'bajo':'alto'}
+function cumple(d){const m=minimo(d);if(m==null||d.pc==null)return null;return Math.round(d.pc*10)/10>=m}
+// nota cuando pasa de lo requerido: ej. '2.0% arriba de lo requerido (100%)'
+function arriba(d){if(d.req==null||d.pc==null)return '';const x=Math.round((d.pc-d.req)*10)/10;if(x<=0)return '';const mx=maximo(d);return '▲ '+f(x,1)+'% arriba de lo requerido ('+d.req+'%)'+(mx!=null&&Math.round(d.pc*10)/10>mx?' · pasa el máximo de '+mx+'%':'')}
+function estado(d){const c=cumple(d);return c===false?'bajo':c}
 function recs(d){const e=estado(d);return e==='bajo'?REC_BAJO:e==='alto'?REC_ALTO:[]}
 function maximo(d){return d.req==null||!d.tol?null:d.req+d.tol}
 function rango(n){return n.tol?(n.req-n.tol)+'% a '+(n.req+n.tol)+'%':n.req+'% en adelante'}
@@ -313,8 +315,8 @@ function recalc(){
   $('pc').textContent=d.pc==null?'—':f(d.pc,1)+'%';
   $('pcNota').textContent=nota(d);$('pcRef').textContent=d.ref?'Norma SCT '+d.ref:'';
   const ok=cumple(d),box=$('resBox');box.className='res';
-  if(ok!=null){box.classList.add(ok?'ok':'bad');const e=estado(d);$('pcLab').textContent=ok?'✔ CUMPLE':(e==='alto'?'✘ FUERA DE RANGO (ALTO)':'✘ NO CUMPLE (BAJO)')}
-  const rc=recs(d);$('recBox').style.display=rc.length?'':'none';$('recTit').textContent=estado(d)==='alto'?'Recomendaciones · arriba del máximo ('+maximo(d)+'%)':'Recomendaciones · abajo del mínimo ('+minimo(d)+'%)';$('recList').innerHTML=rc.map(t=>'<li>'+esc(t)+'</li>').join('');
+  if(ok!=null){box.classList.add(ok?'ok':'bad');const e=estado(d);$('pcLab').textContent=ok?'✔ CUMPLE':'✘ NO CUMPLE (BAJO)';const ar=arriba(d);if(ok&&ar)$('pcRef').textContent=ar+(d.ref?' · Norma SCT '+d.ref:'')}
+  const rc=recs(d);$('recBox').style.display=rc.length?'':'none';$('recTit').textContent='Recomendaciones · abajo del mínimo ('+minimo(d)+'%)';$('recList').innerHTML=rc.map(t=>'<li>'+esc(t)+'</li>').join('');
   const n=normaDe(d.capa),mh=$('mvHint');mh.className='hint';
   if(n){mh.textContent='Típica para '+d.capa.toLowerCase()+': '+mvTxt(n)+' ('+n.pr+'). Es referencia, no norma.';
     if(d.mvsm&&(d.mvsm<n.mv[0]||d.mvsm>n.mv[1])){mh.className='hint warn';mh.textContent='⚠ '+f(d.mvsm,0)+' kg/m³ está fuera de lo típico para '+d.capa.toLowerCase()+' ('+mvTxt(n)+'). Confirma con el laboratorio que el Proctor sea de este material.'}}
@@ -455,7 +457,7 @@ function pintarLista(){
   $('lista').innerHTML=L.map(([id,d])=>{
     const c=cumple(d),k=c===false?'bad':'ok';
     return `<div class="item ${k}"><div class="t"><b>Km ${esc(d.cad)}${d.nocala?' · Cala '+esc(d.nocala):''}</b><span class="pill ${k}">${f(d.pc,1)}%</span></div>
-    <div class="nota ${k}">${c===false?(estado(d)==='alto'?'✘ Fuera de rango (alto)':'✘ No cumple (bajo)'):'✔ Cumple'} · ${esc(nota(d))}</div>
+    <div class="nota ${k}">${c===false?'✘ No cumple (bajo)':'✔ Cumple'} · ${esc(nota(d))}${c!==false&&arriba(d)?'<br>'+esc(arriba(d)):''}</div>
     <div class="s">${esc(fFecha(d.fecha))}${d.hora?' '+esc(d.hora):''} · Cuerpo ${esc(d.cuerpo)} · ${esc(d.lado||d.ubic||'')} · ${f(d.esp,0)} cm<br>
     M.V. seca ${f(d.mvs,0)} / máx ${f(d.mvsm,0)} kg/m³ · Hum ${f(d.hum,1)}%${d.lugar?'<br>📍 '+esc(d.lugar):''}${d.mapa?' · 🛰':''}${(d.fotos||[]).length?' · 📷 '+d.fotos.length:''}${d.obs?'<br>'+esc(d.obs):''}</div>
     <div class="a"><button onclick="pdfUno('${id}')">📄 PDF</button><button onclick="editar('${id}')">Editar</button><button onclick="copiarUno('${id}')">Copiar</button><button class="del" onclick="borrar('${id}')">Borrar</button></div></div>`}).join('');
@@ -482,14 +484,14 @@ async function cerrarModal(si){
 }
 
 // === Copiar / CSV ===
-function texto(d){return `CALA DE COMPACTACIÓN\nFecha: ${fFecha(d.fecha)}${d.hora?' '+d.hora:''}${d.nocala?'  ·  Cala '+d.nocala:''}\nCapa: ${d.capa}\nCadenamiento: ${d.cad}  ·  Cuerpo: ${d.cuerpo}  ·  ${d.lado||''}${d.lugar?'\nUbicación: '+d.lugar:''}${mapUrl(d)?'\n'+mapUrl(d):''}\nEspesor: ${f(d.esp,0)} cm\nMasa final arena: ${f(d.mf,0)} g\nVol. arena: ${f(d.vol,4)}\nM. vol. húmeda: ${f(d.mvh,0)} kg/m³\nHumedad: ${f(d.hum,1)} %\nM. vol. seca: ${f(d.mvs,0)} kg/m³\nM. vol. máxima: ${f(d.mvsm,0)} kg/m³\nCOMPACTACIÓN: ${f(d.pc,1)} %  ${cumple(d)===false?(estado(d)==='alto'?'FUERA DE RANGO (ALTO)':'NO CUMPLE (BAJO)'):'CUMPLE'}\nNorma: ${nota(d)}${d.obs?'\nObs: '+d.obs:''}`}
+function texto(d){return `CALA DE COMPACTACIÓN\nFecha: ${fFecha(d.fecha)}${d.hora?' '+d.hora:''}${d.nocala?'  ·  Cala '+d.nocala:''}\nCapa: ${d.capa}\nCadenamiento: ${d.cad}  ·  Cuerpo: ${d.cuerpo}  ·  ${d.lado||''}${d.lugar?'\nUbicación: '+d.lugar:''}${mapUrl(d)?'\n'+mapUrl(d):''}\nEspesor: ${f(d.esp,0)} cm\nMasa final arena: ${f(d.mf,0)} g\nVol. arena: ${f(d.vol,4)}\nM. vol. húmeda: ${f(d.mvh,0)} kg/m³\nHumedad: ${f(d.hum,1)} %\nM. vol. seca: ${f(d.mvs,0)} kg/m³\nM. vol. máxima: ${f(d.mvsm,0)} kg/m³\nCOMPACTACIÓN: ${f(d.pc,1)} %  ${cumple(d)===false?'NO CUMPLE (BAJO)':'CUMPLE'}${cumple(d)!==false&&arriba(d)?'\n'+arriba(d).replace('▲ ',''):''}\nNorma: ${nota(d)}${d.obs?'\nObs: '+d.obs:''}`}
 async function copiar(t,m){try{await navigator.clipboard.writeText(t);m('Copiado ✓')}catch(e){m('No se pudo copiar en este navegador')}}
 function copiarUno(id){copiar(texto(regs[id]),msg2)}
 const COLS=[['fecha','Fecha'],['hora','Hora'],['nocala','Cala'],['capa','Capa'],['cad','Cadenamiento'],['cuerpo','Cuerpo'],['lado','Lado'],['lugar','Ubicación'],['lat','Latitud'],['lng','Longitud'],['esp','Espesor cm'],['mi','Masa inicial arena g'],['ms','Masa sobrante arena g'],['mf','Masa final arena g'],['mva','M.Vol. arena'],['vol','Vol. arena'],['mh','Masa mat. húmedo g'],['mvh','M.Vol. húmeda'],['hum','% humedad'],['mvs','M.Vol. seca'],['mvsm','M.Vol. máxima'],['pc','% compactación'],['norma','Norma'],['cumple','Resultado'],['obs','Observaciones']];
 function filas(sep){
   const r2=(k,v)=>v==null?'':(typeof v==='number'?(k==='vol'?v.toFixed(4):(k==='pc'||k==='hum'?v.toFixed(1):Math.round(v*100)/100)):v);
   return [COLS.map(c=>c[1]).join(sep)].concat(filtradas().reverse().map(([i,d])=>COLS.map(([k])=>{
-    let s=k==='cumple'?(cumple(d)===false?(estado(d)==='alto'?'FUERA DE RANGO (ALTO)':'NO CUMPLE (BAJO)'):'CUMPLE'):k==='norma'?nota(d):k==='fecha'?fFecha(d.fecha):k==='lado'?(d.lado||d.ubic||''):String(r2(k,d[k]));
+    let s=k==='cumple'?(cumple(d)===false?'NO CUMPLE (BAJO)':'CUMPLE'+(arriba(d)?' - '+arriba(d).replace('▲ ',''):'')):k==='norma'?nota(d):k==='fecha'?fFecha(d.fecha):k==='lado'?(d.lado||d.ubic||''):String(r2(k,d[k]));
     if(sep===',')s='"'+String(s).replace(/"/g,'""')+'"';else s=String(s).replace(/\t|\n/g,' ');return s}).join(sep))).join('\n');
 }
 function copiarTabla(){if(!filtradas().length){msg2('No hay registros');return}copiar(filas('\t'),t=>msg2(t==='Copiado ✓'?'Tabla copiada ✓ · pégala en Excel':t))}
@@ -566,9 +568,9 @@ async function pdfDeCala(d,fotosSrc,mapaSrc){
   doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(93,103,108);doc.text('% DE COMPACTACIÓN',M+25,y+6,{align:'center'});
   doc.setFontSize(24);doc.setTextColor(...col);doc.text(f(d.pc,1)+'%',M+25,y+17,{align:'center'});
   doc.setDrawColor(200);doc.line(M+52,y+4,M+52,y+20);
-  doc.setFontSize(15);doc.text(ok===false?(estado(d)==='alto'?'FUERA DE RANGO (ALTO)':'NO CUMPLE (BAJO)'):'CUMPLE',M+58,y+10);
+  doc.setFontSize(15);doc.text(ok===false?'NO CUMPLE (BAJO)':'CUMPLE',M+58,y+10);
   doc.setFontSize(10);doc.setTextColor(28,34,38);doc.text('Norma: '+nota(d),M+58,y+16);
-  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(93,103,108);if(d.ref)doc.text('SCT '+d.ref,M+58,y+21);
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(93,103,108);const ar=ok!==false?arriba(d).replace('▲ ',''):'';doc.text((ar?ar+'  -  ':'')+(d.ref?'SCT '+d.ref:''),M+58,y+21);
   y+=30;
   const rc=recs(d);
   if(rc.length){doc.setFontSize(9);const lines=rc.map(t=>doc.splitTextToSize(doc._cl(t),CW-12));const hh=8+lines.reduce((a,l)=>a+l.length*4+1.5,0);
@@ -622,8 +624,8 @@ async function pdfGeneral(){
     headStyles:{fillColor:[43,49,54],textColor:255,fontStyle:'bold',fontSize:7.5},
     head:[['Fecha y hora','Cala','Cadenamiento','Capa','Cuerpo','Lado','Esp. (cm)','Hum. (%)','M.V. húmeda','M.V. seca','M.V.S. máx.','% Comp.','Norma','Resultado']],
     body:L.map(([i,d])=>[fFecha(d.fecha)+(d.hora?' '+d.hora:''),d.nocala||'',d.cad,d.capa,d.cuerpo,d.lado||d.ubic||'',f(d.esp,0),f(d.hum,1),f(d.mvh,0),f(d.mvs,0),f(d.mvsm,0),f(d.pc,1),
-      d.req+'%'+(d.tol?' ± '+d.tol:' mín.'),cumple(d)===false?(estado(d)==='alto'?'ALTO':'NO CUMPLE'):'CUMPLE']),
-    didParseCell:c=>{if(c.section==='body'&&(c.column.index===11||c.column.index===13)){const bad=c.row.raw[13]!=='CUMPLE';c.cell.styles.fontStyle='bold';c.cell.styles.textColor=bad?[179,54,44]:[31,138,76];c.cell.styles.fillColor=bad?[251,230,227]:[227,244,234]}},
+      d.req+'%'+(d.tol?' ± '+d.tol:' mín.'),cumple(d)===false?'NO CUMPLE':(arriba(d)?'CUMPLE (+'+f(Math.round((d.pc-d.req)*10)/10,1)+'%)':'CUMPLE')]),
+    didParseCell:c=>{if(c.section==='body'&&(c.column.index===11||c.column.index===13)){const bad=c.row.raw[13]==='NO CUMPLE';c.cell.styles.fontStyle='bold';c.cell.styles.textColor=bad?[179,54,44]:[31,138,76];c.cell.styles.fillColor=bad?[251,230,227]:[227,244,234]}},
     didDrawPage:()=>{encabezado(doc,'CONTROL DE CALAS DE COMPACTACIÓN')}});
   y=doc.lastAutoTable.finalY+4;
   firmas(doc,y,'CONTROL DE CALAS DE COMPACTACIÓN');pie(doc);
