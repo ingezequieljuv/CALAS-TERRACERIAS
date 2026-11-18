@@ -67,6 +67,8 @@ input.y{background:var(--amar);border-color:var(--amarB)}
 .foto .x{position:absolute;top:5px;right:5px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:16px;line-height:28px;padding:0}
 .filebtn{display:block;text-align:center;cursor:pointer}
 .filebtn input{display:none}
+.satbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.satbtns #btnSat{grid-column:1/-1}
 .item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;border-left:5px solid var(--line)}
 .item.ok{border-left-color:var(--ok)}.item.bad{border-left-color:var(--bad)}
 .item .t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -135,6 +137,13 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--mut)}
       <div><label>Longitud</label><input id="lng" inputmode="decimal" placeholder="-104.3170"></div>
       <p class="hint full" id="gpsHint">Toca “Mi ubicación”, o pega aquí las coordenadas o el enlace de Google Maps / Apple Maps.</p>
       <div class="full" id="mapW" style="display:none"><a class="maplink" id="mapA" href="#" target="_blank" rel="noopener">🗺 Ver punto en Google Maps</a></div>
+      <div class="full satbtns">
+        <button type="button" class="btn sec sm" id="btnSat">🛰 Mapa satelital automático</button>
+        <a class="btn sec sm" id="btnEarth" href="https://earth.google.com/web/" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">🌍 Abrir en Google Earth</a>
+        <label class="btn sec sm filebtn">📎 Adjuntar captura<input type="file" id="fMapa" accept="image/*"></label>
+      </div>
+      <p class="hint full" id="satHint">Al capturar tu ubicación se descarga solo el mapa satelital del punto. Sale en el registro y en el PDF.</p>
+      <div class="full" id="mapaW" style="display:none"><div class="foto"><img id="mapaImg" alt="Mapa satelital" style="height:auto;max-height:260px;object-fit:cover"><button class="x" onclick="quitarMapa()">×</button></div></div>
     </div>
   </div>
 
@@ -221,7 +230,8 @@ const LS='calas_compactacion_v1', LSP='calas_ultimos_v1';
 const ELABORO={n:'Ing. Cesar Ezequiel Tafoya Garibay',p:'Supervisor'}, VOBO={n:'Ing. Julio César Rojas Miranda',p:'Jefe de Supervisión'};
 let regs={}, editId=null, db=null, col=null, dl=null, assets=null;
 let fotos=[];           // fotos del formulario: {a:id}|{d:dataURL}|{p:dataURL,blob} + c (pie)
-let fotosQuitadas=[];   // ids de assets a borrar al guardar
+let fotosQuitadas=[];
+let mapa=null, satKey='';   // mapa satelital: {p,blob}|{a}|{d}|{r}   // ids de assets a borrar al guardar
 
 // === Norma SCT por capa (fija, no editable) ===
 const NORMA={
@@ -281,7 +291,7 @@ function recalc(){
   if(ok!=null){box.classList.add(ok?'ok':'bad');$('pcLab').textContent=ok?'✔ CUMPLE':'✘ NO CUMPLE'}
   else $('pcLab').textContent='% de compactación';
   const la=parseFloat(d.lat),lo=parseFloat(d.lng);
-  if(isFinite(la)&&isFinite(lo)){$('mapW').style.display='';$('mapA').href=mapUrl(d)}else $('mapW').style.display='none';
+  if(isFinite(la)&&isFinite(lo)){$('mapW').style.display='';$('mapA').href=mapUrl(d);$('btnEarth').href=`https://earth.google.com/web/@${la},${lo},120a,700d,35y,0h,0t,0r`}else{$('mapW').style.display='none';$('btnEarth').href='https://earth.google.com/web/'}
 }
 document.querySelectorAll('input,select').forEach(e=>{e.addEventListener('input',recalc);e.addEventListener('change',recalc)});
 
@@ -292,7 +302,7 @@ function parseCoords(txt){
  m=txt.match(/(\d+)°\s*(\d+)'\s*([\d.]+)"?\s*([NS])[\s,]+(\d+)°\s*(\d+)'\s*([\d.]+)"?\s*([EWO])/i);
  if(m){const c=(d,mi,s,h)=>(+d+ +mi/60+ +s/3600)*(/[SWO]/i.test(h)?-1:1);return{lat:c(m[1],m[2],m[3],m[4]),lng:c(m[5],m[6],m[7],m[8])}}
  return null}
-function setCoords(c){$('lat').value=c.lat.toFixed(6);$('lng').value=c.lng.toFixed(6);recalc()}
+function setCoords(c){$('lat').value=c.lat.toFixed(6);$('lng').value=c.lng.toFixed(6);recalc();autoSat()}
 ['lugar','lat','lng'].forEach(id=>$(id).addEventListener('paste',e=>{const t=(e.clipboardData||window.clipboardData).getData('text');const c=parseCoords(t);if(c){e.preventDefault();setCoords(c);$('gpsHint').textContent='Coordenadas capturadas ✓'}}));
 $('btnGps').onclick=()=>{
  const hint=$('gpsHint');
@@ -300,6 +310,43 @@ $('btnGps').onclick=()=>{
  $('btnGps').textContent='Buscando…';
  navigator.geolocation.getCurrentPosition(p=>{setCoords({lat:p.coords.latitude,lng:p.coords.longitude});$('btnGps').textContent='📍 Mi ubicación';hint.textContent=`Ubicación capturada (precisión ±${Math.round(p.coords.accuracy)} m).`},
  ()=>{$('btnGps').textContent='📍 Mi ubicación';hint.innerHTML='No se pudo leer el GPS aquí. <a href="https://maps.apple.com/" target="_blank" rel="noopener">Abre Maps</a>, mantén presionado tu punto, copia las coordenadas y pégalas en Latitud.'},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})};
+// === Mapa satelital (igual que la bitácora) ===
+const SAT_Z=18,SAT_W=1280,SAT_H=800;
+function loadTile(url){return new Promise((res,rej)=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>res(im);im.onerror=rej;im.src=url})}
+async function satImage(lat,lng){
+ const n=256*Math.pow(2,SAT_Z),r=lat*Math.PI/180;
+ const px=(lng+180)/360*n,py=(1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n;
+ const x0=px-SAT_W/2,y0=py-SAT_H/2,tx0=Math.floor(x0/256),ty0=Math.floor(y0/256),tx1=Math.floor((x0+SAT_W)/256),ty1=Math.floor((y0+SAT_H)/256);
+ const c=document.createElement('canvas');c.width=SAT_W;c.height=SAT_H;const g=c.getContext('2d');g.fillStyle='#333';g.fillRect(0,0,SAT_W,SAT_H);
+ const jobs=[];for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++)jobs.push(loadTile(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${SAT_Z}/${ty}/${tx}`).then(im=>g.drawImage(im,Math.round(tx*256-x0),Math.round(ty*256-y0))));
+ await Promise.all(jobs);
+ const cx=SAT_W/2,cy=SAT_H/2;g.save();g.shadowColor='rgba(0,0,0,.5)';g.shadowBlur=8;g.fillStyle='#e53935';g.beginPath();g.arc(cx,cy-34,20,Math.PI,0);g.lineTo(cx,cy);g.closePath();g.fill();g.restore();
+ g.fillStyle='#fff';g.beginPath();g.arc(cx,cy-34,8,0,Math.PI*2);g.fill();
+ const mpp=156543.03392*Math.cos(r)/Math.pow(2,SAT_Z),sm=100,sl=sm/mpp;
+ g.fillStyle='rgba(0,0,0,.55)';g.fillRect(SAT_W-sl-44,SAT_H-74,sl+30,30);g.fillStyle='#fff';g.fillRect(SAT_W-sl-30,SAT_H-52,sl,5);g.font='600 16px system-ui,sans-serif';g.fillText('100 m',SAT_W-sl-30,SAT_H-58);
+ const cad=[$('cad').value?'Km '+$('cad').value:'',$('capa').value,'Cuerpo '+$('cuerpo').value,$('lado').value].filter(Boolean).join(' · ');
+ const t1=`${lat.toFixed(6)}, ${lng.toFixed(6)}`,t2=[cad,fFecha($('fecha').value)].filter(Boolean).join('  ·  ');
+ g.font='600 22px system-ui,sans-serif';const w1=g.measureText(t1).width;g.font='500 18px system-ui,sans-serif';const tw=Math.max(w1,g.measureText(t2).width);
+ g.fillStyle='rgba(0,0,0,.6)';g.fillRect(14,14,tw+28,70);g.fillStyle='#fff';g.font='600 22px system-ui,sans-serif';g.fillText(t1,28,44);g.fillStyle='#f2b705';g.font='500 18px system-ui,sans-serif';g.fillText(t2,28,72);
+ g.font='13px system-ui,sans-serif';const at='Imagen: Esri, Maxar, Earthstar Geographics';const aw=g.measureText(at).width;g.fillStyle='rgba(255,255,255,.75)';g.fillRect(SAT_W-aw-14,SAT_H-22,aw+14,22);g.fillStyle='#222';g.fillText(at,SAT_W-aw-7,SAT_H-7);
+ const d=c.toDataURL('image/jpeg',.88);
+ return await new Promise((res,rej)=>{try{c.toBlob(b=>b?res({d,blob:b}):rej(new Error('blob')),'image/jpeg',.88)}catch(e){rej(e)}})}
+function pintarMapa(){if(mapa){$('mapaImg').src=srcFoto(mapa);$('mapaW').style.display=''}else{$('mapaW').style.display='none';$('mapaImg').removeAttribute('src')}}
+function quitarMapa(){if(mapa&&mapa.a)fotosQuitadas.push(mapa.a);mapa=null;satKey='';pintarMapa()}
+async function addSat(auto){
+ const lat=parseFloat($('lat').value),lng=parseFloat($('lng').value);
+ if(!isFinite(lat)||!isFinite(lng)){if(!auto)$('satHint').textContent='Primero captura tu ubicación o escribe latitud y longitud.';return}
+ const key=lat.toFixed(5)+','+lng.toFixed(5);if(auto&&key===satKey&&mapa)return;
+ const btn=$('btnSat');btn.disabled=true;btn.textContent='Descargando mapa…';
+ try{const r=await satImage(lat,lng);if(mapa&&mapa.a)fotosQuitadas.push(mapa.a);mapa={p:r.d,blob:r.blob};satKey=key;pintarMapa();
+   $('satHint').textContent='Mapa satelital listo ✓ Sale en el registro y en el PDF.'}
+ catch(e){$('satHint').textContent=window.claude?'Dentro de la app de Claude no se puede descargar el mapa satelital. Usa tu app instalada (versión de GitHub), o toma captura en Google Earth y adjúntala con 📎.':'No se pudo descargar el mapa. Revisa tu señal, o toma captura en Google Earth y adjúntala con 📎.'}
+ finally{btn.disabled=false;btn.textContent='🛰 Mapa satelital automático'}}
+function autoSat(){addSat(true)}
+$('btnSat').onclick=()=>addSat(false);
+['lat','lng'].forEach(id=>$(id).addEventListener('change',()=>{autoSat()}));
+$('fMapa').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;
+ try{const r=await comprimir(file,2000,.88);if(mapa&&mapa.a)fotosQuitadas.push(mapa.a);mapa={p:r.d,blob:r.blob};satKey='';pintarMapa();$('satHint').textContent='Captura agregada ✓ Sale en el registro y en el PDF.'}catch(_){msg('No se pudo leer la imagen')}};
 function mapUrl(e){return e.lat&&e.lng?`https://maps.google.com/?q=${e.lat},${e.lng}`:''}
 
 // === Fotos ===
@@ -317,6 +364,11 @@ function pintarFotos(){
   $('fotos').innerHTML=fotos.map((p,i)=>`<div class="foto"><img src="${esc(srcFoto(p))}" alt=""><button class="x" onclick="quitarFoto(${i})">×</button><input placeholder="Descripción" value="${esc(p.c||'')}" oninput="fotos[${i}].c=this.value"></div>`).join('');
 }
 function quitarFoto(i){const p=fotos.splice(i,1)[0];if(p&&p.a)fotosQuitadas.push(p.a);pintarFotos()}
+async function subirUna(p){
+  if(p.a||p.d||p.r)return p.a?{a:p.a}:p.r?{r:p.r}:{d:p.d};
+  if(assets){try{const r=await assets.upload(p.blob,{type:'image/jpeg'});return {a:r.id}}catch(e){}}
+  try{const r=await comprimir(p.blob,1400,.8);return {d:r.d}}catch(e){return null}
+}
 async function subirFotos(){
   const out=[];
   for(const p of fotos){
@@ -330,7 +382,7 @@ async function subirFotos(){
 
 // === Formulario ===
 function nueva(){
-  editId=null;fotos=[];fotosQuitadas=[];pintarFotos();$('btnGuardar').textContent='Guardar cala';
+  editId=null;fotos=[];fotosQuitadas=[];pintarFotos();mapa=null;satKey='';pintarMapa();$('btnGuardar').textContent='Guardar cala';
   $('fecha').value=hoy();['nocala','cad','obs','lugar','lat','lng','esp','mi','ms','mh','hum'].forEach(k=>$(k).value='');
   const u=lsGet(LSP,{});
   if(u.mva!=null)$('mva').value=u.mva;
@@ -339,6 +391,7 @@ function nueva(){
   if(u.cuerpo)$('cuerpo').value=u.cuerpo;
   recalc();$('msg').textContent='';
   $('gpsHint').textContent='Toca “Mi ubicación”, o pega aquí las coordenadas o el enlace de Google Maps / Apple Maps.';
+  $('satHint').textContent='Al capturar tu ubicación se descarga solo el mapa satelital del punto. Sale en el registro y en el PDF.';
 }
 let guardando=false;
 async function guardar(){
@@ -346,11 +399,11 @@ async function guardar(){
   const d=armar();
   if(!d.cad){msg('Falta el cadenamiento');return}
   if(d.pc==null){msg('Faltan datos en amarillo para calcular');return}
-  guardando=true;$('btnGuardar').disabled=true;msg(fotos.some(p=>p.blob&&!p.a)?'Subiendo fotos…':'Guardando…');
+  guardando=true;$('btnGuardar').disabled=true;msg(fotos.some(p=>p.blob&&!p.a)||(mapa&&mapa.blob)?'Subiendo fotos…':'Guardando…');
   try{
     const id=editId||('cala_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
     const old=regs[id];
-    d.fotos=await subirFotos();d.creado=old?old.creado:Date.now();d.mod=Date.now();
+    d.fotos=await subirFotos();d.mapa=mapa?await subirUna(mapa):null;d.creado=old?old.creado:Date.now();d.mod=Date.now();
     regs[id]=d;lsSet(LS,regs);
     lsSet(LSP,{mva:d.mva,mvsm:d.mvsm,capa:d.capa,cuerpo:d.cuerpo});
     for(const a of fotosQuitadas){try{await assets.delete(a)}catch(e){}}
@@ -375,7 +428,7 @@ function pintarLista(){
     return `<div class="item ${k}"><div class="t"><b>Km ${esc(d.cad)}${d.nocala?' · Cala '+esc(d.nocala):''}</b><span class="pill ${k}">${f(d.pc,1)}%</span></div>
     <div class="nota ${k}">${c===false?'✘ No cumple':'✔ Cumple'} · ${esc(nota(d))}</div>
     <div class="s">${esc(fFecha(d.fecha))} · Cuerpo ${esc(d.cuerpo)} · ${esc(d.lado||d.ubic||'')} · ${f(d.esp,0)} cm<br>
-    M.V. seca ${f(d.mvs,0)} / máx ${f(d.mvsm,0)} kg/m³ · Hum ${f(d.hum,1)}%${d.lugar?'<br>📍 '+esc(d.lugar):''}${(d.fotos||[]).length?' · 📷 '+d.fotos.length:''}${d.obs?'<br>'+esc(d.obs):''}</div>
+    M.V. seca ${f(d.mvs,0)} / máx ${f(d.mvsm,0)} kg/m³ · Hum ${f(d.hum,1)}%${d.lugar?'<br>📍 '+esc(d.lugar):''}${d.mapa?' · 🛰':''}${(d.fotos||[]).length?' · 📷 '+d.fotos.length:''}${d.obs?'<br>'+esc(d.obs):''}</div>
     <div class="a"><button onclick="pdfUno('${id}')">📄 PDF</button><button onclick="editar('${id}')">Editar</button><button onclick="copiarUno('${id}')">Copiar</button><button class="del" onclick="borrar('${id}')">Borrar</button></div></div>`}).join('');
 }
 
@@ -386,6 +439,7 @@ function editar(id){
   if(NORMA[d.capa])$('capa').value=d.capa;
   Y.forEach(k=>$(k).value=d[k]??'');
   fotos=(d.fotos||[]).map(p=>({...p}));fotosQuitadas=[];pintarFotos();
+  mapa=d.mapa?{...d.mapa}:null;satKey=mapa&&d.lat&&d.lng?(+d.lat).toFixed(5)+','+(+d.lng).toFixed(5):'';pintarMapa();
   $('btnGuardar').textContent='Guardar cambios';recalc();msg('Editando cala del km '+d.cad);scrollTo(0,0);
 }
 let pend=null;
@@ -395,7 +449,7 @@ async function cerrarModal(si){
   delete regs[id];lsSet(LS,regs);pintarLista();
   const tb=tombGet();tb[id]=Date.now();tombSet(tb);ghSched(800);
   if(col){try{await col.doc(id).delete()}catch(e){msg2('No se pudo borrar en la nube')}}
-  if(assets)for(const p of (d.fotos||[]))if(p.a){try{await assets.delete(p.a)}catch(e){}}
+  if(assets)for(const p of [...(d.fotos||[]),...(d.mapa?[d.mapa]:[])])if(p.a){try{await assets.delete(p.a)}catch(e){}}
 }
 
 // === Copiar / CSV ===
@@ -447,7 +501,7 @@ function firmas(doc,y,tit){
     doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.text(p.p,x+w/2,y+23.5,{align:'center'})});
   return y+28;
 }
-async function pdfDeCala(d,fotosSrc){
+async function pdfDeCala(d,fotosSrc,mapaSrc){
   if(!window.jspdf){return 'No cargó el generador de PDF. Revisa tu señal y vuelve a abrir.'}
   const doc=nuevoPDF(),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=14,CW=W-2*M;
   let y=encabezado(doc,'REPORTE DE CALA DE COMPACTACIÓN');
@@ -460,6 +514,12 @@ async function pdfDeCala(d,fotosSrc){
     didDrawCell:c=>{if(c.section==='body'&&c.row.index===4&&c.column.index===1&&mapUrl(d))doc.link(c.cell.x,c.cell.y,c.cell.width,c.cell.height,{url:mapUrl(d)})},
     didParseCell:c=>{if(c.section==='body'&&c.row.index===4&&c.column.index===1&&mapUrl(d))c.cell.styles.textColor=[30,90,160]}});
   y=doc.lastAutoTable.finalY+4;
+  if(mapaSrc){const im=await imgData(mapaSrc);if(im){
+    const s=Math.min(CW/im.w,92/im.h),w=im.w*s,h=im.h*s;
+    if(y+h+10>H-14){doc.addPage();y=encabezado(doc,'REPORTE DE CALA DE COMPACTACIÓN')}
+    doc.setFillColor(43,49,54);doc.rect(M,y,CW,6,'F');doc.setTextColor(255);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('UBICACIÓN SATELITAL',M+2,y+4.2);y+=7.5;
+    try{doc.addImage(im.d,'JPEG',M+(CW-w)/2,y,w,h,undefined,'MEDIUM');if(mapUrl(d))doc.link(M+(CW-w)/2,y,w,h,{url:mapUrl(d)})}catch(e){}
+    y+=h+4;doc.setTextColor(28,34,38)}}
   const Yel=[255,246,184];
   const rows=[['Espesor',f(d.esp,0),'cm',1],['Masa inicial arena',f(d.mi,0),'g',1],['Masa sobrante arena',f(d.ms,0),'g',1],['Masa final arena',f(d.mf,0),'g',0],
     ['M. volumétrica arena',f(d.mva,0),'kg/m³',1],['Vol. arena',f(d.vol,4),'',0],['Masa material húmedo',f(d.mh,0),'g',1],['M. vol. húmeda',f(d.mvh,0),'kg/m³',0],
@@ -504,12 +564,12 @@ async function pdfDeCala(d,fotosSrc){
 }
 async function pdfActual(){
   const d=armar();if(d.pc==null){msg('Faltan datos para el PDF');return}
-  msg('Generando PDF…');const r=await pdfDeCala(d,fotos.map(p=>({src:srcFoto(p),c:p.c})));
+  msg('Generando PDF…');const r=await pdfDeCala(d,fotos.map(p=>({src:srcFoto(p),c:p.c})),mapa?srcFoto(mapa):null);
   if(typeof r==='string'){msg(r);return}
   await guardarArchivo(r.nombre,r.doc.output('blob'),msg);
 }
 async function pdfUno(id){
-  const d=regs[id];msg2('Generando PDF…');const r=await pdfDeCala(d,(d.fotos||[]).map(p=>({src:srcFoto(p),c:p.c})));
+  const d=regs[id];msg2('Generando PDF…');const r=await pdfDeCala(d,(d.fotos||[]).map(p=>({src:srcFoto(p),c:p.c})),d.mapa?srcFoto(d.mapa):null);
   if(typeof r==='string'){msg2(r);return}
   await guardarArchivo(r.nombre,r.doc.output('blob'),msg2);
 }
@@ -572,7 +632,7 @@ async function ghSync(){
       if(w===b&&(!a||(b.mod||0)>(a.mod||0)))pulled++;
       out[id]=JSON.parse(JSON.stringify(w));}
     // subir fotos que solo están en este dispositivo
-    for(const id in out){for(const p of (out[id].fotos||[])){if(p.d&&!p.r){
+    for(const id in out){for(const p of [...(out[id].fotos||[]),...(out[id].mapa?[out[id].mapa]:[])]){if(p.d&&!p.r){
       const nm=id+'_'+Math.random().toString(36).slice(2,8)+'.jpg';ghUi('🔄 Subiendo fotos…');
       await ghPutRaw(GHR.dir+nm,p.d.split(',')[1],'Foto cala '+(out[id].cad||''));p.r=RAWG+GHR.dir+nm;delete p.d}}}
     for(const id in out){const b=Rm.regs[id];if(!b||JSON.stringify(b)!==JSON.stringify(out[id]))changed=true}
