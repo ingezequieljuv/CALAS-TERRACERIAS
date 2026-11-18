@@ -52,6 +52,7 @@ input.y{background:var(--amar);border-color:var(--amarB)}
 .res.ok{background:#e3f4ea;border-color:var(--ok)}.res.ok .big,.res.ok .lab{color:var(--ok)}
 .res.bad{background:#fbe6e3;border-color:var(--bad)}.res.bad .big,.res.bad .lab{color:var(--bad)}
 .recs{border-color:var(--bad);background:#fff7f6}.recs h2{border-left-color:var(--bad);color:var(--bad)}.recs ul{margin:0;padding-left:18px;font-size:14px;line-height:1.5}.recs li{margin-bottom:5px}
+.falta{width:100%;border-collapse:collapse;font-size:13.5px}.falta td{padding:6px 4px;border-top:1px solid #f0d6d2;vertical-align:top}.falta td:first-child{font-weight:600}.falta td:last-child{color:var(--mut);text-align:right;font-size:12.5px}
 #mvHint.warn{color:#9a6a00;font-weight:600}
 .btn{width:100%;padding:14px;border:0;border-radius:12px;font-size:16px;font-weight:700;background:var(--asphalt);color:#fff;font-family:inherit;cursor:pointer}
 .btn.pri{background:var(--accent);color:var(--asphalt)}
@@ -184,7 +185,8 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--mut)}
       <div class="ref" id="pcRef"></div>
     </div>
   </div>
-  <div class="card recs" id="recBox" style="display:none"><h2 id="recTit">Recomendaciones</h2><ul id="recList"></ul></div>
+  <div class="card recs" id="recBox" style="display:none"><h2 id="recTit">Recomendaciones</h2><ul id="recList"></ul>
+    <div id="faltaW"><h3 id="faltaTit" style="font-size:14px;margin:12px 0 6px;color:var(--ink)"></h3><table class="falta" id="falta"></table><p class="hint" style="margin-top:6px">Cada renglón es por separado (cambiando solo ese dato). Úsalo para revisar: el valor nuevo debe salir de una prueba real (nueva humedad, Proctor del material correcto o repetir la cala).</p></div></div>
 
   <div class="card">
     <h2>Fotografías</h2>
@@ -289,7 +291,12 @@ function normaDe(capa){return NORMA[capa]||null}
 function minimo(d){return d.req==null?null:d.req-(d.tol||0)}
 function cumple(d){const m=minimo(d);if(m==null||d.pc==null)return null;return Math.round(d.pc*10)/10>=m}
 // nota cuando pasa de lo requerido: ej. '2.0% arriba de lo requerido (100%)'
-function arriba(d){if(d.req==null||d.pc==null)return '';const x=Math.round((d.pc-d.req)*10)/10;if(x<=0)return '';const mx=maximo(d);return '▲ '+f(x,1)+'% arriba de lo requerido ('+d.req+'%)'+(mx!=null&&Math.round(d.pc*10)/10>mx?' · pasa el máximo de '+mx+'%':'')}
+function arriba(d){if(d.req==null||d.pc==null)return '';const x=Math.round((d.pc-d.req)*10)/10;if(x<=0)return '';const mx=maximo(d);const p=Math.round(d.pc*10)/10;return '▲ '+f(x,1)+'% arriba de lo requerido ('+d.req+'%)'+(mx!=null&&p>mx?' · pasa el máximo de '+mx+'%':'')+(p>100?' · ⚠ más de 100%':'')}
+// valores que harían llegar al mínimo (solo para revisar en campo/laboratorio)
+function faltaria(d){const m=minimo(d);if(estado(d)!=='bajo'||!d.mvh||!d.mvsm||!d.vol)return [];const o=[];
+  const w=Math.floor((d.mvh*100/(d.mvsm*m)-1)*1000)/10;o.push(w>=0?['Humedad','con '+f(w,1)+'% o menos','tienes '+f(d.hum,1)+'%']:['Humedad','no alcanza solo bajando la humedad','tienes '+f(d.hum,1)+'%']);
+  o.push(['M.V.S.M.','con '+f(Math.floor(d.mvs*100/m),0)+' kg/m³ o menos','tienes '+f(d.mvsm,0)+' kg/m³']);
+  o.push(['Masa material húmedo','con '+f(Math.ceil(m*d.mvsm*(1+d.hum/100)*d.vol/100),0)+' g o más','tienes '+f(d.mh,0)+' g']);return o}
 function estado(d){const c=cumple(d);return c===false?'bajo':c}
 function recs(d){const e=estado(d);return e==='bajo'?REC_BAJO:e==='alto'?REC_ALTO:[]}
 function maximo(d){return d.req==null||!d.tol?null:d.req+d.tol}
@@ -317,6 +324,7 @@ function recalc(){
   const ok=cumple(d),box=$('resBox');box.className='res';
   if(ok!=null){box.classList.add(ok?'ok':'bad');const e=estado(d);$('pcLab').textContent=ok?'✔ CUMPLE':'✘ NO CUMPLE (BAJO)';const ar=arriba(d);if(ok&&ar)$('pcRef').textContent=ar+(d.ref?' · Norma SCT '+d.ref:'')}
   const rc=recs(d);$('recBox').style.display=rc.length?'':'none';$('recTit').textContent='Recomendaciones · abajo del mínimo ('+minimo(d)+'%)';$('recList').innerHTML=rc.map(t=>'<li>'+esc(t)+'</li>').join('');
+  const fl=faltaria(d);$('faltaW').style.display=fl.length?'':'none';$('faltaTit').textContent='¿Con qué valores llegarías al '+minimo(d)+'%?';$('falta').innerHTML=fl.map(r=>'<tr><td>'+esc(r[0])+'</td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td></tr>').join('');
   const n=normaDe(d.capa),mh=$('mvHint');mh.className='hint';
   if(n){mh.textContent='Típica para '+d.capa.toLowerCase()+': '+mvTxt(n)+' ('+n.pr+'). Es referencia, no norma.';
     if(d.mvsm&&(d.mvsm<n.mv[0]||d.mvsm>n.mv[1])){mh.className='hint warn';mh.textContent='⚠ '+f(d.mvsm,0)+' kg/m³ está fuera de lo típico para '+d.capa.toLowerCase()+' ('+mvTxt(n)+'). Confirma con el laboratorio que el Proctor sea de este material.'}}
