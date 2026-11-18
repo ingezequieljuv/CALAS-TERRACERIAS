@@ -1,5 +1,5 @@
 // Guarda Calas de Compactación en el dispositivo para que abra sin señal.
-const CACHE = "calas-practico-v3";
+const CACHE = "calas-practico-v4";
 const CORE = ["./", "index.html", "manifest.json", "icon-180.png?v=2", "icon-192.png?v=2", "icon-512.png?v=2",
   "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"];
 self.addEventListener("install", e => {

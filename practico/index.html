@@ -89,6 +89,10 @@ input.y{background:var(--amar);border-color:var(--amarB)}
 .tablaNorma{width:100%;border-collapse:collapse;font-size:13px}
 .tablaNorma td{padding:6px 4px;border-bottom:1px solid var(--line)}
 .tablaNorma td:last-child{text-align:right;font-weight:600}
+.tablaNorma th{text-align:left;font-size:11.5px;color:var(--mut);padding:6px 4px;border-bottom:2px solid var(--line)}
+.tablaNorma th:last-child{text-align:right}
+.tablaNorma td:nth-child(2){white-space:nowrap}
+.nref{font-size:11px;color:var(--mut);font-weight:400}
 details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--mut)}
 </style>
 </head>
@@ -113,7 +117,8 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--mut)}
     <h2>Datos de la cala</h2>
     <div class="grid">
       <div><label>Fecha</label><input type="date" id="fecha"></div>
-      <div><label>No. de cala</label><input id="nocala" placeholder="Ej. 1"></div>
+      <div><label>Hora</label><input type="time" id="hora"></div>
+      <div class="full"><label>No. de cala</label><input id="nocala" placeholder="Ej. 1"></div>
       <div class="full"><label>Capa</label><select id="capa"></select></div>
       <div><label>% requerido (norma)</label><div class="fijo" id="reqTxt">—</div></div>
       <div><label>Tolerancia</label><div class="fijo" id="tolTxt">—</div></div>
@@ -192,7 +197,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--mut)}
   <div class="msg" id="msg"></div>
 
   <div class="card" style="margin-top:14px">
-    <details><summary>Valores de norma SCT por capa</summary>
+    <details open><summary>Valores de norma SCT por capa (mínimos y máximos)</summary>
       <table class="tablaNorma" id="tablaNorma"></table>
     </details>
   </div>
@@ -244,13 +249,15 @@ const NORMA={
  'Relleno':{req:90,tol:0,ref:'N·CTR·CAR·1·01·011 Rellenos'}
 };
 $('capa').innerHTML=Object.keys(NORMA).map(k=>`<option>${k}</option>`).join('');
-$('tablaNorma').innerHTML=Object.entries(NORMA).map(([k,n])=>`<tr><td>${k}</td><td>${n.req}%${n.tol?' ± '+n.tol:' mín.'}</td></tr>`).join('');
+$('tablaNorma').innerHTML='<tr><th>Capa</th><th>Norma</th><th>Rango que cumple</th></tr>'+Object.entries(NORMA).map(([k,n])=>`<tr><td>${k}<div class="nref">SCT ${n.ref}</div></td><td>${n.req}%${n.tol?' ± '+n.tol:' mín.'}</td><td>${rango(n)}</td></tr>`).join('')+
+ '<tr><td colspan="3" class="nref" style="padding-top:8px">Con tolerancia ± el grado debe quedar dentro del rango (mínimo y máximo). Sub-base, base, desplante y relleno solo piden mínimo; la norma no fija máximo. Si tu proyecto marca otro valor, manda el proyecto.</td></tr>';
 
 function lsGet(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function num(id){const v=parseFloat($(id).value);return isFinite(v)?v:null}
 function f(n,d){return n==null||!isFinite(n)?'—':n.toLocaleString('es-MX',{minimumFractionDigits:d,maximumFractionDigits:d})}
 function hoy(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function ahora(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 function fFecha(s){if(!s)return '';const [a,m,d]=s.split('-');return `${d}/${m}/${a}`}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
@@ -267,13 +274,15 @@ function calc(v){
 function normaDe(capa){return NORMA[capa]||null}
 function minimo(d){return d.req==null?null:d.req-(d.tol||0)}
 function cumple(d){const m=minimo(d);return m==null||d.pc==null?null:Math.round(d.pc*10)/10>=m}
-function nota(d){if(d.req==null)return '';return (d.capa||'')+' '+d.req+'%'+(d.tol?' ± '+d.tol+' (mín. '+minimo(d)+'%)':' mínimo')}
+function maximo(d){return d.req==null||!d.tol?null:d.req+d.tol}
+function rango(n){return n.tol?(n.req-n.tol)+'% a '+(n.req+n.tol)+'%':n.req+'% en adelante'}
+function nota(d){if(d.req==null)return '';return (d.capa||'')+' '+d.req+'%'+(d.tol?' ± '+d.tol+' ('+minimo(d)+'% a '+maximo(d)+'%)':' mínimo')}
 
 function armar(){
   const v={};Y.forEach(k=>v[k]=num(k));
   const capa=$('capa').value,n=normaDe(capa)||{};
   const r=calc(v);
-  return {fecha:$('fecha').value,nocala:$('nocala').value.trim(),capa,cad:$('cad').value.trim(),cuerpo:$('cuerpo').value,lado:$('lado').value,
+  return {fecha:$('fecha').value,hora:$('hora').value,nocala:$('nocala').value.trim(),capa,cad:$('cad').value.trim(),cuerpo:$('cuerpo').value,lado:$('lado').value,
     lugar:$('lugar').value.trim(),lat:$('lat').value.trim(),lng:$('lng').value.trim(),obs:$('obs').value.trim(),
     ...v,...r,req:n.req,tol:n.tol||0,ref:n.ref||''};
 }
@@ -284,11 +293,11 @@ function recalc(){
   $('cMvh').innerHTML=f(d.mvh,0)+'<span class="u">kg/m³</span>';
   $('cMvs').innerHTML=f(d.mvs,0)+'<span class="u">kg/m³</span>';
   $('reqTxt').textContent=d.req!=null?d.req+' %':'—';
-  $('tolTxt').textContent=d.tol?'± '+d.tol+' %  (mín. '+minimo(d)+' %)':'Mínimo';
+  $('tolTxt').textContent=d.tol?'± '+d.tol+' %  ('+minimo(d)+' a '+maximo(d)+' %)':'Mínimo, sin máximo';
   $('pc').textContent=d.pc==null?'—':f(d.pc,1)+'%';
   $('pcNota').textContent=nota(d);$('pcRef').textContent=d.ref?'Norma SCT '+d.ref:'';
   const ok=cumple(d),box=$('resBox');box.className='res';
-  if(ok!=null){box.classList.add(ok?'ok':'bad');$('pcLab').textContent=ok?'✔ CUMPLE':'✘ NO CUMPLE'}
+  if(ok!=null){box.classList.add(ok?'ok':'bad');$('pcLab').textContent=ok?'✔ CUMPLE':'✘ NO CUMPLE';const mx=maximo(d);if(ok&&mx!=null&&Math.round(d.pc*10)/10>mx)$('pcRef').textContent='⚠ Arriba del rango (máx. '+mx+'%): revisa humedad o M.V.S.M. · '+$('pcRef').textContent}
   else $('pcLab').textContent='% de compactación';
   const la=parseFloat(d.lat),lo=parseFloat(d.lng);
   if(isFinite(la)&&isFinite(lo)){$('mapW').style.display='';$('mapA').href=mapUrl(d);$('btnEarth').href=`https://earth.google.com/web/@${la},${lo},120a,700d,35y,0h,0t,0r`}else{$('mapW').style.display='none';$('btnEarth').href='https://earth.google.com/web/'}
@@ -325,7 +334,7 @@ async function satImage(lat,lng){
  const mpp=156543.03392*Math.cos(r)/Math.pow(2,SAT_Z),sm=100,sl=sm/mpp;
  g.fillStyle='rgba(0,0,0,.55)';g.fillRect(SAT_W-sl-44,SAT_H-74,sl+30,30);g.fillStyle='#fff';g.fillRect(SAT_W-sl-30,SAT_H-52,sl,5);g.font='600 16px system-ui,sans-serif';g.fillText('100 m',SAT_W-sl-30,SAT_H-58);
  const cad=[$('cad').value?'Km '+$('cad').value:'',$('capa').value,'Cuerpo '+$('cuerpo').value,$('lado').value].filter(Boolean).join(' · ');
- const t1=`${lat.toFixed(6)}, ${lng.toFixed(6)}`,t2=[cad,fFecha($('fecha').value)].filter(Boolean).join('  ·  ');
+ const t1=`${lat.toFixed(6)}, ${lng.toFixed(6)}`,t2=[cad,fFecha($('fecha').value)+' '+$('hora').value].filter(Boolean).join('  ·  ');
  g.font='600 22px system-ui,sans-serif';const w1=g.measureText(t1).width;g.font='500 18px system-ui,sans-serif';const tw=Math.max(w1,g.measureText(t2).width);
  g.fillStyle='rgba(0,0,0,.6)';g.fillRect(14,14,tw+28,70);g.fillStyle='#fff';g.font='600 22px system-ui,sans-serif';g.fillText(t1,28,44);g.fillStyle='#f2b705';g.font='500 18px system-ui,sans-serif';g.fillText(t2,28,72);
  g.font='13px system-ui,sans-serif';const at='Imagen: Esri, Maxar, Earthstar Geographics';const aw=g.measureText(at).width;g.fillStyle='rgba(255,255,255,.75)';g.fillRect(SAT_W-aw-14,SAT_H-22,aw+14,22);g.fillStyle='#222';g.fillText(at,SAT_W-aw-7,SAT_H-7);
@@ -383,7 +392,7 @@ async function subirFotos(){
 // === Formulario ===
 function nueva(){
   editId=null;fotos=[];fotosQuitadas=[];pintarFotos();mapa=null;satKey='';pintarMapa();$('btnGuardar').textContent='Guardar cala';
-  $('fecha').value=hoy();['nocala','cad','obs','lugar','lat','lng','esp','mi','ms','mh','hum'].forEach(k=>$(k).value='');
+  $('fecha').value=hoy();$('hora').value=ahora();['nocala','cad','obs','lugar','lat','lng','esp','mi','ms','mh','hum'].forEach(k=>$(k).value='');
   const u=lsGet(LSP,{});
   if(u.mva!=null)$('mva').value=u.mva;
   if(u.mvsm!=null)$('mvsm').value=u.mvsm;
@@ -427,14 +436,14 @@ function pintarLista(){
     const c=cumple(d),k=c===false?'bad':'ok';
     return `<div class="item ${k}"><div class="t"><b>Km ${esc(d.cad)}${d.nocala?' · Cala '+esc(d.nocala):''}</b><span class="pill ${k}">${f(d.pc,1)}%</span></div>
     <div class="nota ${k}">${c===false?'✘ No cumple':'✔ Cumple'} · ${esc(nota(d))}</div>
-    <div class="s">${esc(fFecha(d.fecha))} · Cuerpo ${esc(d.cuerpo)} · ${esc(d.lado||d.ubic||'')} · ${f(d.esp,0)} cm<br>
+    <div class="s">${esc(fFecha(d.fecha))}${d.hora?' '+esc(d.hora):''} · Cuerpo ${esc(d.cuerpo)} · ${esc(d.lado||d.ubic||'')} · ${f(d.esp,0)} cm<br>
     M.V. seca ${f(d.mvs,0)} / máx ${f(d.mvsm,0)} kg/m³ · Hum ${f(d.hum,1)}%${d.lugar?'<br>📍 '+esc(d.lugar):''}${d.mapa?' · 🛰':''}${(d.fotos||[]).length?' · 📷 '+d.fotos.length:''}${d.obs?'<br>'+esc(d.obs):''}</div>
     <div class="a"><button onclick="pdfUno('${id}')">📄 PDF</button><button onclick="editar('${id}')">Editar</button><button onclick="copiarUno('${id}')">Copiar</button><button class="del" onclick="borrar('${id}')">Borrar</button></div></div>`}).join('');
 }
 
 function editar(id){
   const d=regs[id];if(!d)return;editId=id;tab('cap');
-  $('fecha').value=d.fecha||'';$('nocala').value=d.nocala||'';$('cad').value=d.cad||'';$('cuerpo').value=d.cuerpo;
+  $('fecha').value=d.fecha||'';$('hora').value=d.hora||'';$('nocala').value=d.nocala||'';$('cad').value=d.cad||'';$('cuerpo').value=d.cuerpo;
   $('lado').value=d.lado||d.ubic||'Izquierdo';$('obs').value=d.obs||'';$('lugar').value=d.lugar||'';$('lat').value=d.lat||'';$('lng').value=d.lng||'';
   if(NORMA[d.capa])$('capa').value=d.capa;
   Y.forEach(k=>$(k).value=d[k]??'');
@@ -453,10 +462,10 @@ async function cerrarModal(si){
 }
 
 // === Copiar / CSV ===
-function texto(d){return `CALA DE COMPACTACIÓN\nFecha: ${fFecha(d.fecha)}${d.nocala?'  ·  Cala '+d.nocala:''}\nCapa: ${d.capa}\nCadenamiento: ${d.cad}  ·  Cuerpo: ${d.cuerpo}  ·  ${d.lado||''}${d.lugar?'\nUbicación: '+d.lugar:''}${mapUrl(d)?'\n'+mapUrl(d):''}\nEspesor: ${f(d.esp,0)} cm\nMasa final arena: ${f(d.mf,0)} g\nVol. arena: ${f(d.vol,4)}\nM. vol. húmeda: ${f(d.mvh,0)} kg/m³\nHumedad: ${f(d.hum,1)} %\nM. vol. seca: ${f(d.mvs,0)} kg/m³\nM. vol. máxima: ${f(d.mvsm,0)} kg/m³\nCOMPACTACIÓN: ${f(d.pc,1)} %  ${cumple(d)===false?'NO CUMPLE':'CUMPLE'}\nNorma: ${nota(d)}${d.obs?'\nObs: '+d.obs:''}`}
+function texto(d){return `CALA DE COMPACTACIÓN\nFecha: ${fFecha(d.fecha)}${d.hora?' '+d.hora:''}${d.nocala?'  ·  Cala '+d.nocala:''}\nCapa: ${d.capa}\nCadenamiento: ${d.cad}  ·  Cuerpo: ${d.cuerpo}  ·  ${d.lado||''}${d.lugar?'\nUbicación: '+d.lugar:''}${mapUrl(d)?'\n'+mapUrl(d):''}\nEspesor: ${f(d.esp,0)} cm\nMasa final arena: ${f(d.mf,0)} g\nVol. arena: ${f(d.vol,4)}\nM. vol. húmeda: ${f(d.mvh,0)} kg/m³\nHumedad: ${f(d.hum,1)} %\nM. vol. seca: ${f(d.mvs,0)} kg/m³\nM. vol. máxima: ${f(d.mvsm,0)} kg/m³\nCOMPACTACIÓN: ${f(d.pc,1)} %  ${cumple(d)===false?'NO CUMPLE':'CUMPLE'}\nNorma: ${nota(d)}${d.obs?'\nObs: '+d.obs:''}`}
 async function copiar(t,m){try{await navigator.clipboard.writeText(t);m('Copiado ✓')}catch(e){m('No se pudo copiar en este navegador')}}
 function copiarUno(id){copiar(texto(regs[id]),msg2)}
-const COLS=[['fecha','Fecha'],['nocala','Cala'],['capa','Capa'],['cad','Cadenamiento'],['cuerpo','Cuerpo'],['lado','Lado'],['lugar','Ubicación'],['lat','Latitud'],['lng','Longitud'],['esp','Espesor cm'],['mi','Masa inicial arena g'],['ms','Masa sobrante arena g'],['mf','Masa final arena g'],['mva','M.Vol. arena'],['vol','Vol. arena'],['mh','Masa mat. húmedo g'],['mvh','M.Vol. húmeda'],['hum','% humedad'],['mvs','M.Vol. seca'],['mvsm','M.Vol. máxima'],['pc','% compactación'],['norma','Norma'],['cumple','Resultado'],['obs','Observaciones']];
+const COLS=[['fecha','Fecha'],['hora','Hora'],['nocala','Cala'],['capa','Capa'],['cad','Cadenamiento'],['cuerpo','Cuerpo'],['lado','Lado'],['lugar','Ubicación'],['lat','Latitud'],['lng','Longitud'],['esp','Espesor cm'],['mi','Masa inicial arena g'],['ms','Masa sobrante arena g'],['mf','Masa final arena g'],['mva','M.Vol. arena'],['vol','Vol. arena'],['mh','Masa mat. húmedo g'],['mvh','M.Vol. húmeda'],['hum','% humedad'],['mvs','M.Vol. seca'],['mvsm','M.Vol. máxima'],['pc','% compactación'],['norma','Norma'],['cumple','Resultado'],['obs','Observaciones']];
 function filas(sep){
   const r2=(k,v)=>v==null?'':(typeof v==='number'?(k==='vol'?v.toFixed(4):(k==='pc'||k==='hum'?v.toFixed(1):Math.round(v*100)/100)):v);
   return [COLS.map(c=>c[1]).join(sep)].concat(filtradas().reverse().map(([i,d])=>COLS.map(([k])=>{
@@ -509,10 +518,10 @@ async function pdfDeCala(d,fotosSrc,mapaSrc){
   doc.autoTable({startY:y,margin:{left:M,right:M},theme:'grid',styles:{fontSize:9,cellPadding:1.8,textColor:[28,34,38],lineColor:[217,221,216]},
     head:[[{content:'DATOS DE LA CALA',colSpan:4,styles:{fillColor:[43,49,54],textColor:255,fontStyle:'bold'}}]],
     columnStyles:{0:{fontStyle:'bold',fillColor:[246,247,245],cellWidth:32},2:{fontStyle:'bold',fillColor:[246,247,245],cellWidth:32}},
-    body:[['Fecha',fFecha(d.fecha),'No. de cala',d.nocala||'-'],['Capa',d.capa,'Cadenamiento',d.cad],['Cuerpo',d.cuerpo,'Lado',d.lado||d.ubic||'-'],
+    body:[['Fecha',fFecha(d.fecha),'Hora',d.hora||'-'],['Capa',d.capa,'No. de cala',d.nocala||'-'],['Cadenamiento',d.cad,'Cuerpo',d.cuerpo],['Lado',{content:d.lado||d.ubic||'-',colSpan:3}],
       ['Ubicación',{content:d.lugar||'-',colSpan:3}],['Coordenadas',{content:d.lat&&d.lng?d.lat+', '+d.lng:'-',colSpan:3}]],
-    didDrawCell:c=>{if(c.section==='body'&&c.row.index===4&&c.column.index===1&&mapUrl(d))doc.link(c.cell.x,c.cell.y,c.cell.width,c.cell.height,{url:mapUrl(d)})},
-    didParseCell:c=>{if(c.section==='body'&&c.row.index===4&&c.column.index===1&&mapUrl(d))c.cell.styles.textColor=[30,90,160]}});
+    didDrawCell:c=>{if(c.section==='body'&&c.row.index===5&&c.column.index===1&&mapUrl(d))doc.link(c.cell.x,c.cell.y,c.cell.width,c.cell.height,{url:mapUrl(d)})},
+    didParseCell:c=>{if(c.section==='body'&&c.row.index===5&&c.column.index===1&&mapUrl(d))c.cell.styles.textColor=[30,90,160]}});
   y=doc.lastAutoTable.finalY+4;
   if(mapaSrc){const im=await imgData(mapaSrc);if(im){
     const s=Math.min(CW/im.w,92/im.h),w=im.w*s,h=im.h*s;
@@ -585,8 +594,8 @@ async function pdfGeneral(){
   doc.autoTable({startY:y,margin:{left:M,right:M,top:28},theme:'grid',
     styles:{fontSize:8,cellPadding:1.4,textColor:[28,34,38],lineColor:[217,221,216],halign:'center',valign:'middle'},
     headStyles:{fillColor:[43,49,54],textColor:255,fontStyle:'bold',fontSize:7.5},
-    head:[['Fecha','Cala','Cadenamiento','Capa','Cuerpo','Lado','Esp. (cm)','Hum. (%)','M.V. húmeda','M.V. seca','M.V.S. máx.','% Comp.','Norma','Resultado']],
-    body:L.map(([i,d])=>[fFecha(d.fecha),d.nocala||'',d.cad,d.capa,d.cuerpo,d.lado||d.ubic||'',f(d.esp,0),f(d.hum,1),f(d.mvh,0),f(d.mvs,0),f(d.mvsm,0),f(d.pc,1),
+    head:[['Fecha y hora','Cala','Cadenamiento','Capa','Cuerpo','Lado','Esp. (cm)','Hum. (%)','M.V. húmeda','M.V. seca','M.V.S. máx.','% Comp.','Norma','Resultado']],
+    body:L.map(([i,d])=>[fFecha(d.fecha)+(d.hora?' '+d.hora:''),d.nocala||'',d.cad,d.capa,d.cuerpo,d.lado||d.ubic||'',f(d.esp,0),f(d.hum,1),f(d.mvh,0),f(d.mvs,0),f(d.mvsm,0),f(d.pc,1),
       d.req+'%'+(d.tol?' ± '+d.tol:' mín.'),cumple(d)===false?'NO CUMPLE':'CUMPLE']),
     didParseCell:c=>{if(c.section==='body'&&(c.column.index===11||c.column.index===13)){const bad=c.row.raw[13]==='NO CUMPLE';c.cell.styles.fontStyle='bold';c.cell.styles.textColor=bad?[179,54,44]:[31,138,76];c.cell.styles.fillColor=bad?[251,230,227]:[227,244,234]}},
     didDrawPage:()=>{encabezado(doc,'CONTROL DE CALAS DE COMPACTACIÓN')}});
