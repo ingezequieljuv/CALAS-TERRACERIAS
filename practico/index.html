@@ -6,8 +6,8 @@
 <title>Calas de Compactación</title>
 <meta name="theme-color" content="#2b3136">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
+<link rel="apple-touch-icon" href="icon-180.png?v=2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Calas">
@@ -190,6 +190,12 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--mut)}
 </section>
 
 <section id="vReg" style="display:none">
+  <div class="card" id="ghBox">
+    <h2 id="ghState">☁️ Respaldo en la nube</h2>
+    <div id="ghTokRow" style="display:flex;gap:8px"><input id="ghTok" placeholder="Pega aquí tu token de GitHub" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn pri sm" style="width:auto" id="ghTokOk" type="button">Guardar</button></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button class="btn sec sm" style="width:auto" id="ghNow" type="button">Sincronizar ahora</button><span class="hint" id="ghMsg"></span></div>
+    <p class="hint" style="margin-top:8px">Con el token, lo que guardes en la compu aparece en el iPhone y al revés, con fotos. Sin internet se guarda en el dispositivo y se sube solo al regresar la señal.</p>
+  </div>
   <div style="display:flex;gap:8px;margin-bottom:10px">
     <input id="busca" placeholder="Buscar cadenamiento, capa, fecha…" oninput="pintarLista()">
   </div>
@@ -302,7 +308,7 @@ function comprimir(file,max,q){return new Promise((res,rej)=>{const u=URL.create
     const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);URL.revokeObjectURL(u);
     const d=c.toDataURL('image/jpeg',q);c.toBlob(b=>res({d,blob:b,w,h}),'image/jpeg',q)};
   im.onerror=()=>{URL.revokeObjectURL(u);rej()};im.src=u})}
-function srcFoto(p){return p.a?'/_blob/'+p.a:(p.d||p.p)}
+function srcFoto(p){return p.a?'/_blob/'+p.a:(p.r||p.d||p.p)}
 $('fFoto').onchange=async e=>{
   const fs=[...e.target.files];e.target.value='';
   for(const file of fs){try{const r=await comprimir(file,2000,.88);fotos.push({p:r.d,blob:r.blob,c:''});pintarFotos()}catch(err){msg('No se pudo leer una foto')}}
@@ -314,10 +320,10 @@ function quitarFoto(i){const p=fotos.splice(i,1)[0];if(p&&p.a)fotosQuitadas.push
 async function subirFotos(){
   const out=[];
   for(const p of fotos){
-    if(p.a||p.d){out.push({...(p.a?{a:p.a}:{d:p.d}),c:p.c||''});continue}
+    if(p.a||p.d||p.r){out.push({...(p.a?{a:p.a}:p.r?{r:p.r}:{d:p.d}),c:p.c||''});continue}
     let ok=false;
     if(assets){try{const r=await assets.upload(p.blob,{type:'image/jpeg'});out.push({a:r.id,c:p.c||''});ok=true}catch(e){}}
-    if(!ok){try{const r=await comprimir(p.blob,1000,.7);out.push({d:r.d,c:p.c||''})}catch(e){}}
+    if(!ok){try{const r=await comprimir(p.blob,1400,.8);out.push({d:r.d,c:p.c||''})}catch(e){}}
   }
   return out;
 }
@@ -352,7 +358,7 @@ async function guardar(){
     let t;
     if(col){try{await col.doc(id).set(d);t=(editId?'Cala actualizada':'Cala guardada')+' ✓ · '+f(d.pc,1)+'%'}catch(e){t='Guardada en este dispositivo; no se pudo subir a la nube'}}
     else t='Guardada en este dispositivo ✓ · '+f(d.pc,1)+'%';
-    nueva();msg(t);
+    nueva();msg(t);ghSched(800);
   }finally{guardando=false;$('btnGuardar').disabled=false}
 }
 function msg(t){$('msg').textContent=t}
@@ -387,6 +393,7 @@ function borrar(id){pend=id;$('modalTxt').textContent='¿Borrar la cala del km '
 async function cerrarModal(si){
   $('modal').classList.remove('on');if(!si||!pend)return;const id=pend;pend=null;const d=regs[id];
   delete regs[id];lsSet(LS,regs);pintarLista();
+  const tb=tombGet();tb[id]=Date.now();tombSet(tb);ghSched(800);
   if(col){try{await col.doc(id).delete()}catch(e){msg2('No se pudo borrar en la nube')}}
   if(assets)for(const p of (d.fotos||[]))if(p.a){try{await assets.delete(p.a)}catch(e){}}
 }
@@ -528,6 +535,62 @@ async function pdfGeneral(){
   await guardarArchivo('Control_calas_'+hoy()+'.pdf',doc.output('blob'),msg2);
 }
 
+/* ---------- Respaldo en la nube (GitHub, igual que tu otra app) ---------- */
+const GHR={repo:'ingezequieljuv/CALAS-TERRACERIAS',branch:'registros',file:'practico/registros.json',dir:'practico/fotos/'};
+const RAWG=`https://raw.githubusercontent.com/${GHR.repo}/${GHR.branch}/`;
+function ghTok(){let v=null;try{v=localStorage.getItem('ct_ghtoken')||localStorage.getItem('bit_ghtoken')}catch(_){}if(!v)return'';try{const p=JSON.parse(v);return typeof p==='string'?p:''}catch(_){return v}}
+function tombGet(){return lsGet('calas_practico_borr',{})}
+function tombSet(t){lsSet('calas_practico_borr',t)}
+async function ghF(path,opt={}){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),opt.timeout||45000);
+  try{return await fetch('https://api.github.com/repos/'+GHR.repo+path,{cache:'no-store',...opt,signal:ac.signal,headers:{Accept:'application/vnd.github+json',Authorization:'Bearer '+ghTok(),'X-GitHub-Api-Version':'2022-11-28',...(opt.body?{'Content-Type':'application/json'}:{})}})}finally{clearTimeout(tm)}}
+const b64blob=blob=>new Promise((ok,ko)=>{const f=new FileReader();f.onload=()=>ok(String(f.result).split(',')[1]);f.onerror=ko;f.readAsDataURL(blob)});
+const b64txt=s=>b64blob(new Blob([s],{type:'application/json'}));
+async function ghGetFile(){const r=await ghF('/contents/'+GHR.file+'?ref='+GHR.branch);if(r.status===404)return null;if(!r.ok)throw{status:r.status};
+  const j=await r.json();let txt;if(j.content&&j.encoding==='base64'){const bin=atob(j.content.replace(/\s/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);txt=new TextDecoder().decode(u)}
+  else{const d=await fetch(j.download_url+'?t='+Date.now(),{cache:'no-store'});txt=await d.text()}return{data:JSON.parse(txt),sha:j.sha}}
+async function ghPutRaw(path,b64,m,sha){const body={message:m,content:b64,branch:GHR.branch};if(sha)body.sha=sha;const r=await ghF('/contents/'+path,{method:'PUT',body:JSON.stringify(body),timeout:120000});
+  if(!r.ok){const j=await r.json().catch(()=>({}));throw{status:r.status,message:j.message||''}}const j=await r.json();return j.content&&j.content.sha}
+let ghBusy=false,ghAgain=false,ghT=null,ghForce=false;
+const enClaude=()=>!!col;   // dentro de Claude ya se sincroniza solo
+function ghSched(ms){if(enClaude())return;clearTimeout(ghT);ghT=setTimeout(ghSync,ms||3000)}
+function ghUi(m){if(enClaude()){$('ghBox').style.display='none';return}const tk=ghForce?'':ghTok();$('ghTokRow').style.display=tk?'none':'flex';$('ghNow').style.display=tk?'':'none';
+  $('ghState').textContent=tk?'☁️ Respaldo en la nube activado':'☁️ Respaldo en la nube (sin activar)';if(m!=null){$('ghMsg').textContent=m;$('sync').textContent=m}}
+async function ghSync(){
+  if(enClaude())return;
+  if(!ghTok()||ghForce){ghUi('Sin respaldo: pega tu token en Registros');return}
+  if(navigator.onLine===false){ghUi('Sin internet: se sube solo al regresar la señal.');return}
+  if(ghBusy){ghAgain=true;return}ghBusy=true;ghUi('🔄 Sincronizando…');
+  try{
+    let rem=null;try{rem=await ghGetFile()}catch(e){if(e&&e.status===401){ghForce=true;ghUi('El token no sirve o ya venció. Pega uno nuevo.');return}throw e}
+    if(!rem){const c=await ghF('');if(!c.ok){ghForce=true;ghUi('Ese token no tiene acceso al repositorio CALAS-TERRACERIAS. Pega uno que sí lo tenga.');return}}
+    const Rm=rem?rem.data:{regs:{},borr:{}};Rm.regs=Rm.regs||{};Rm.borr=Rm.borr||{};
+    const tb=tombGet();for(const k in Rm.borr)tb[k]=Math.max(tb[k]||0,Rm.borr[k]);
+    const out={};let pulled=0,changed=false;
+    for(const id of new Set([...Object.keys(regs),...Object.keys(Rm.regs)])){
+      const a=regs[id],b=Rm.regs[id];const w=a&&b?((a.mod||0)>=(b.mod||0)?a:b):(a||b);
+      if(tb[id]&&tb[id]>=(w.mod||0))continue;
+      if(w===b&&(!a||(b.mod||0)>(a.mod||0)))pulled++;
+      out[id]=JSON.parse(JSON.stringify(w));}
+    // subir fotos que solo están en este dispositivo
+    for(const id in out){for(const p of (out[id].fotos||[])){if(p.d&&!p.r){
+      const nm=id+'_'+Math.random().toString(36).slice(2,8)+'.jpg';ghUi('🔄 Subiendo fotos…');
+      await ghPutRaw(GHR.dir+nm,p.d.split(',')[1],'Foto cala '+(out[id].cad||''));p.r=RAWG+GHR.dir+nm;delete p.d}}}
+    for(const id in out){const b=Rm.regs[id];if(!b||JSON.stringify(b)!==JSON.stringify(out[id]))changed=true}
+    for(const id in Rm.regs)if(!out[id])changed=true;
+    for(const k in tb)if(!Rm.borr[k])changed=true;
+    if(changed){try{await ghPutRaw(GHR.file,await b64txt(JSON.stringify({regs:out,borr:tb,updated:Date.now()})),'Registros calas de compactación',rem&&rem.sha)}
+      catch(e){if(e&&(e.status===409||e.status===422)){ghBusy=false;ghAgain=false;return ghSched(1500)}throw e}}
+    regs=out;lsSet(LS,regs);tombSet(tb);pintarLista();
+    ghUi('✅ Al día · '+new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})+(pulled?' · '+pulled+' nueva(s) de tu otro dispositivo':''));
+  }catch(e){ghUi('No se pudo sincronizar ('+((e&&e.status)||'sin señal')+'). Se reintenta solo.')}
+  finally{ghBusy=false;if(ghAgain){ghAgain=false;ghSched(1000)}}}
+$('ghTokOk').addEventListener('click',()=>{const v=$('ghTok').value.trim();if(!/^(github_pat_|ghp_)\w+/.test(v)){$('ghMsg').textContent='Ese no parece un token de GitHub';return}
+  try{localStorage.setItem('ct_ghtoken',JSON.stringify(v))}catch(_){}ghForce=false;$('ghTok').value='';ghUi('');ghSync()});
+$('ghNow').addEventListener('click',()=>ghSync());
+window.addEventListener('online',()=>ghSched(1500));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')ghSched(800)});
+setInterval(()=>{if(document.visibilityState==='visible')ghSync()},60000);
+
 function tab(t){$('vCap').style.display=t==='cap'?'':'none';$('vReg').style.display=t==='reg'?'':'none';$('tCap').classList.toggle('on',t==='cap');$('tReg').classList.toggle('on',t==='reg')}
 
 // === Arranque ===
@@ -536,7 +599,7 @@ if('serviceWorker' in navigator&&location.protocol==='https:'&&!window.claude){n
 (async()=>{
   const sync=$('sync');
   try{
-    if(!window.claude||!claude.use){sync.textContent='Guardando solo en este dispositivo';return}
+    if(!window.claude||!claude.use){ghUi();ghSync();return}
     dl=await claude.use('downloads');
     assets=await claude.use('assets');
     db=await claude.use('db');const user=await claude.use('user');
